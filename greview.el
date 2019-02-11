@@ -189,9 +189,7 @@ needed to avoid writing convoluted tests"
     (body . ,(a/get c 'body))
     (path . ,(a/get c 'path))))
 
-(defun parse-review-lines (lines)
-  "Parse LINES corresponding to a code review."
-  (defun parse-line (acc l)
+(defun parse-line (acc l)
     "Reducer function to parse lines in a code review.
 parse, goes through lines in a diff return an alist with body and comments
 L is a line from the diff.
@@ -235,6 +233,8 @@ ACC is an alist accumulating state."
 
        (t acc))))
 
+(defun parse-review-lines (lines)
+  "Parse LINES corresponding to a code review."
   (let* ((acc (-> (a/empty)
                   (a/assoc 'path nil)
                   (a/assoc 'pos nil)
