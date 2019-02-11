@@ -1,9 +1,10 @@
 ;;; greview.el --- Github based code review with emacs -*- lexical-binding: t -*-
 ;; Author: Laurent Charignon <l.charignon@gmail.com>
 ;; Maintainer: Laurent Charignon <l.charignon@gmail.com>
-;; Version: 1.0
-;; Package-Requires: (dependencies)
-;; Keywords: tools
+;; Keywords: git, tools, vc, github
+;; Homepage: https://github.com/charignon/greview
+;; Package-Requires: ((emacs "25") (s "1.12.0") (ghub "2.0") (dash "2.11.0"))
+;; Package-Version: 0.1
 
 ;; This file is not part of GNU Emacs
 
