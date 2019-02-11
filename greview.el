@@ -95,7 +95,8 @@ CALLBACK to call back when done."
                     :headers (if needs-diff greview-diffheader '())
                     :auth 'greview
                     :host greview-host
-                    :callback callback))
+                    :callback callback
+                    :errorback (lambda (_) (message "Error talking to github"))))
 
 (defun greview-get-pr-object (pr-alist callback)
   "Get a pr object given PR-ALIST an alist representing a PR.
@@ -120,6 +121,7 @@ CALLBACK will be called back when done"
                      :auth 'greview
                      :payload review
                      :host greview-host
+                     :errorback (lambda (_) (message "Error talking to github"))
                      :callback callback))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -302,6 +304,7 @@ ACC is an alist accumulating state."
 This function infers the PR name based on the current filename"
   (let* ((pr-alist (greview-pr-from-fname (buffer-file-name)))
          (parsed-review (greview-parsed-review-from-current-buffer)))
+  (message "Submitting review, this may take a while ...")
   (greview-get-pr-object
    pr-alist
    (lambda (v &rest _)
@@ -312,7 +315,7 @@ This function infers the PR name based on the current filename"
        (greview-post-review
         pr-alist
         review (lambda (_)
-                 (message "OK"))))))))
+                 (message "Done submitting review"))))))))
 
 (defun greview-to-comments (text)
   "Convert TEXT, a string to a string where each line is prefixed by ~."
