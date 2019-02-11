@@ -1,10 +1,10 @@
 (require 'greview)
 (require 'buttercup)
 
-(describe "hunk?"
+(describe "greview-hunk?"
   (it "can correctly identify a hunk"
-    (expect (hunk? "foo") :to-be nil)
-    (expect (hunk? "@@ b/foo") :to-be t)))
+    (expect (greview-hunk? "foo") :to-be nil)
+    (expect (greview-hunk? "@@ b/foo") :to-be t)))
 
 (setq examplediff "# This is a global comment at the top of the file
 # with multiple
@@ -81,29 +81,29 @@ index 58baa4b..eae7707 100644
       (body . "And a comment inline about\na specific line\n```with some\ncode```")
       (path . "content/reference/google-closure-library.adoc")))))
 
-(describe "parse-review-lines"
+(describe "greview-parse-review-lines"
   (it "can parse a complex code review"
-    (let* ((actual (parse-review-lines (split-string examplediff "\n"))))
+    (let* ((actual (greview-parse-review-lines (split-string examplediff "\n"))))
       (expect actual :to-equal complex-review-expected)))
   (it "can parse a code review with no comment"
-    (let* ((actual (parse-review-lines (split-string example-no-comment "\n")))
+    (let* ((actual (greview-parse-review-lines (split-string example-no-comment "\n")))
            (expected '((body . "This is a global comment at the top of the file\nwith multiple\nlines"))))
       (expect actual :to-equal expected)))
   (it "can parse a code review with previous comments but ignores it"
-    (let* ((actual (parse-review-lines (split-string example-previous-comments "\n"))))
+    (let* ((actual (greview-parse-review-lines (split-string example-previous-comments "\n"))))
       (expect actual :to-equal complex-review-expected))))
 
 
-(describe "pr-from-fname"
+(describe "greview-pr-from-fname"
   (it "can parse fname and infer pr name"
-    (expect (pr-from-fname "/tmp/charignon___testgheapi___2.diff") :to-equal
+    (expect (greview-pr-from-fname "/tmp/charignon___testgheapi___2.diff") :to-equal
             '((num . "2")
               (repo . "testgheapi")
               (owner . "charignon")))))
 
-(describe "format-diff"
+(describe "greview-format-diff"
   (it "can format a diff"
-    (expect (format-diff "a\nb\nc" "title\nin\nthree\nlines" "body\npart") :to-equal
+    (expect (greview-format-diff "a\nb\nc" "title\nin\nthree\nlines" "body\npart") :to-equal
             "~ title
 ~ in
 ~ three
