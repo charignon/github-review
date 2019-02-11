@@ -1,4 +1,4 @@
-;;; greview.el --- Github based code review with emacs -*- lexical-binding: t -*-
+;;; greview.el --- Github based code review -*- lexical-binding: t -*-
 ;; Author: Laurent Charignon <l.charignon@gmail.com>
 ;; Maintainer: Laurent Charignon <l.charignon@gmail.com>
 ;; Keywords: git, tools, vc, github
@@ -22,7 +22,7 @@
 ;; see <http://www.gnu.org/licenses/>.
 ;;; Commentary:
 
-;; Github based code review with Emacs
+;; Github based code review
 
 ;;; Code:
 
@@ -54,27 +54,27 @@
 ;;  Alist utilities to treat associative lists as immutable data structures  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defun greview-a/copy (alist)
+(defun greview-a-copy (alist)
   "Return a copy of an alist ALIST."
   (copy-alist alist))
 
-(defun greview-a/assoc (alist key value)
+(defun greview-a-assoc (alist key value)
   "Return copy of ALIST where KEY is associated with VALUE."
-  (let* ((dup (greview-a/copy alist)))
+  (let* ((dup (greview-a-copy alist)))
     (setf (alist-get key dup) value)
     dup))
 
-(defun greview-a/dissoc (alist key)
+(defun greview-a-dissoc (alist key)
   "Return copy of ALIST where KEY is removed."
-  (let* ((dup (greview-a/copy alist)))
+  (let* ((dup (greview-a-copy alist)))
     (setf (alist-get key dup nil t) nil)
     dup))
 
-(defun greview-a/get (alist key)
+(defun greview-a-get (alist key)
   "Return value associated with KEY in ALIST."
   (alist-get key alist))
 
-(defun greview-a/empty ()
+(defun greview-a-empty ()
   "Return an empty alist."
   '())
 
@@ -88,11 +88,11 @@ PR-ALIST is an alist representing a PR,
 NEEDS-DIFF t to return a diff nil to return the pr object
 CALLBACK to call back when done."
   (ghub-get (format "/repos/%s/%s/pulls/%s"
-                    (greview-a/get pr-alist 'owner )
-                    (greview-a/get pr-alist 'repo )
-                    (greview-a/get pr-alist 'num )) nil
+                    (greview-a-get pr-alist 'owner )
+                    (greview-a-get pr-alist 'repo )
+                    (greview-a-get pr-alist 'num )) nil
                     :unpaginate t
-                    :headers (if needs-diff diffheader '())
+                    :headers (if needs-diff greview-diffheader '())
                     :auth 'greview
                     :host greview-host
                     :callback callback))
@@ -114,9 +114,9 @@ PR-ALIST is an alist representing a PR
 REVIEW is the review alist
 CALLBACK will be called back when done"
   (ghub-post (format "/repos/%s/%s/pulls/%s/reviews"
-                     (greview-a/get pr-alist 'owner )
-                     (greview-a/get pr-alist 'repo )
-                     (greview-a/get pr-alist 'num )) nil
+                     (greview-a-get pr-alist 'owner )
+                     (greview-a-get pr-alist 'repo )
+                     (greview-a-get pr-alist 'num )) nil
                      :auth 'greview
                      :payload review
                      :host greview-host
@@ -155,49 +155,49 @@ L should looks like +++ b/content/reference/google-closure-library.adoc"
   "Reducing function to merge comments together.
 ACC is an alist representing the state of the reduction
 NEW-COMMENT is a comment to consider"
-  (let* ((lastcomment (greview-a/get acc 'lastcomment))
-         (merged (greview-a/get acc 'merged)))
+  (let* ((lastcomment (greview-a-get acc 'lastcomment))
+         (merged (greview-a-get acc 'merged)))
     (cond
      ;; First comment encountered
      ((equal nil lastcomment)
-      (greview-a/assoc acc 'lastcomment new-comment))
+      (greview-a-assoc acc 'lastcomment new-comment))
 
      ;; Can merge the current comment with the last comment
      ;; if they have the same fields but different content
      ;; that is, if they talk about the same file and position
-     ((and (equal (greview-a/get new-comment 'path) (greview-a/get lastcomment 'path))
-           (equal (greview-a/get new-comment 'position) (greview-a/get lastcomment 'position)))
-      (let* ((new-body (concat (greview-a/get lastcomment 'body) "\n" (greview-a/get new-comment 'body))))
-        (greview-a/assoc acc 'lastcomment (greview-a/assoc new-comment 'body new-body))))
+     ((and (equal (greview-a-get new-comment 'path) (greview-a-get lastcomment 'path))
+           (equal (greview-a-get new-comment 'position) (greview-a-get lastcomment 'position)))
+      (let* ((new-body (concat (greview-a-get lastcomment 'body) "\n" (greview-a-get new-comment 'body))))
+        (greview-a-assoc acc 'lastcomment (greview-a-assoc new-comment 'body new-body))))
 
      ;; Cannot merge the current comment with the last comment
-     (t (greview-a/assoc (greview-a/assoc acc 'merged (cons lastcomment merged)) 'lastcomment new-comment)))))
+     (t (greview-a-assoc (greview-a-assoc acc 'merged (cons lastcomment merged)) 'lastcomment new-comment)))))
 
 
 (defun greview-merge-comments (comments)
   "Takes COMMENTS, inline comments and return a merged list of comments.
 COMMENTS on the same file, same pos are coallesced"
-  (let* ((acc (-> (greview-a/empty) (greview-a/assoc 'lastcomment nil) (greview-a/assoc 'merged '())))
+  (let* ((acc (-> (greview-a-empty) (greview-a-assoc 'lastcomment nil) (greview-a-assoc 'merged '())))
          (acc-reduced (-reduce-from #'greview-merge-comment acc comments)))
-    (cons (greview-a/get acc-reduced 'lastcomment)
-          (greview-a/get acc-reduced 'merged))))
+    (cons (greview-a-get acc-reduced 'lastcomment)
+          (greview-a-get acc-reduced 'merged))))
 
 (defun greview-normalize-comment (c)
   "Normalize the order of entries in the alist C, representing a comment.
 needed to avoid writing convoluted tests"
-  `((position . ,(greview-a/get c 'position))
-    (body . ,(greview-a/get c 'body))
-    (path . ,(greview-a/get c 'path))))
+  `((position . ,(greview-a-get c 'position))
+    (body . ,(greview-a-get c 'body))
+    (path . ,(greview-a-get c 'path))))
 
 (defun greview-parse-line (acc l)
     "Reducer function to parse lines in a code review.
 parse, goes through lines in a diff return an alist with body and comments
 L is a line from the diff.
 ACC is an alist accumulating state."
-    (let* ((pos (greview-a/get acc 'pos))
-           (body (greview-a/get acc 'body))
-           (path (greview-a/get acc 'path))
-           (comments (greview-a/get acc 'comments))
+    (let* ((pos (greview-a-get acc 'pos))
+           (body (greview-a-get acc 'body))
+           (path (greview-a-get acc 'path))
+           (comments (greview-a-get acc 'comments))
            (top-level? (equal nil pos))
            (in-file? (not top-level?)))
       (cond
@@ -206,43 +206,43 @@ ACC is an alist accumulating state."
 
        ;; First cgreview-hunk
        ((and top-level? (greview-hunk? l))
-        (greview-a/assoc acc 'pos 0))
+        (greview-a-assoc acc 'pos 0))
 
        ;; Start of file
        ((greview-start-of-file? l)
-        (greview-a/assoc (greview-a/assoc acc 'pos nil) 'path (greview-file-path l)))
+        (greview-a-assoc (greview-a-assoc acc 'pos nil) 'path (greview-file-path l)))
 
        ;; Global Comments
        ((and top-level? (greview-comment? l))
-        (greview-a/assoc acc 'body (concat body (greview-comment-text l) "\n")))
+        (greview-a-assoc acc 'body (concat body (greview-comment-text l) "\n")))
 
        ;; Local Comments
        ((and in-file? (greview-comment? l))
-        (greview-a/assoc
+        (greview-a-assoc
          acc
          'comments
          (cons
-          (-> (greview-a/empty)
-              (greview-a/assoc 'position pos)
-              (greview-a/assoc 'path path)
-              (greview-a/assoc 'body (greview-comment-text l)))
+          (-> (greview-a-empty)
+              (greview-a-assoc 'position pos)
+              (greview-a-assoc 'path path)
+              (greview-a-assoc 'body (greview-comment-text l)))
           comments)))
 
        ;; Any other line in a file
-       (in-file? (greview-a/assoc acc 'pos (+ 1 pos)))
+       (in-file? (greview-a-assoc acc 'pos (+ 1 pos)))
 
        (t acc))))
 
 (defun greview-parse-review-lines (lines)
   "Parse LINES corresponding to a code review."
-  (let* ((acc (-> (greview-a/empty)
-                  (greview-a/assoc 'path nil)
-                  (greview-a/assoc 'pos nil)
-                  (greview-a/assoc 'body "")
-                  (greview-a/assoc 'comments ())))
+  (let* ((acc (-> (greview-a-empty)
+                  (greview-a-assoc 'path nil)
+                  (greview-a-assoc 'pos nil)
+                  (greview-a-assoc 'body "")
+                  (greview-a-assoc 'comments ())))
          (parsed-data (-reduce-from #'greview-parse-line acc lines))
-         (parsed-comments (greview-a/get parsed-data 'comments))
-         (parsed-body (s-trim-right (greview-a/get parsed-data 'body)))
+         (parsed-comments (greview-a-get parsed-data 'comments))
+         (parsed-body (s-trim-right (greview-a-get parsed-data 'body)))
          (merged-comments (if (equal nil parsed-comments)
                               nil
                             (greview-merge-comments (reverse parsed-comments)))))
@@ -259,20 +259,20 @@ ACC is an alist accumulating state."
   (let* ((fname (car (last (s-split "/" buffer-fname)))))
     (save-match-data
       (and (string-match "\\(.*\\)___\\(.*\\)___\\([0-9]+\\)\.diff" fname)
-           (let* ((pr-alist  (-> (greview-a/empty)
-                                 (greview-a/assoc 'owner (match-string 1 fname))
-                                 (greview-a/assoc 'repo  (match-string 2 fname))
-                                 (greview-a/assoc 'num   (match-string 3 fname)))))
+           (let* ((pr-alist  (-> (greview-a-empty)
+                                 (greview-a-assoc 'owner (match-string 1 fname))
+                                 (greview-a-assoc 'repo  (match-string 2 fname))
+                                 (greview-a-assoc 'num   (match-string 3 fname)))))
              pr-alist)))))
 
 (defun greview-pr-from-url (url)
   "Extract a pr alist from a pull request URL."
   (save-match-data
     (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" url)
-         (let* ((pr-alist  (-> (greview-a/empty)
-                               (greview-a/assoc 'owner (match-string 1 url))
-                               (greview-a/assoc 'repo  (match-string 2 url))
-                               (greview-a/assoc 'num   (match-string 3 url)))))
+         (let* ((pr-alist  (-> (greview-a-empty)
+                               (greview-a-assoc 'owner (match-string 1 url))
+                               (greview-a-assoc 'repo  (match-string 2 url))
+                               (greview-a-assoc 'num   (match-string 3 url)))))
            pr-alist))))
 
 
@@ -280,9 +280,9 @@ ACC is an alist accumulating state."
   "Save a DIFF (string) to a temp file named after pr specified by PR-ALIST."
   (find-file (format "%s/%s___%s___%s.diff"
                      greview-review-folder
-                     (greview-a/get pr-alist 'owner)
-                     (greview-a/get pr-alist 'repo)
-                     (greview-a/get pr-alist 'num)))
+                     (greview-a-get pr-alist 'owner)
+                     (greview-a-get pr-alist 'repo)
+                     (greview-a-get pr-alist 'num)))
   (erase-buffer)
   (insert diff)
   (save-buffer))
@@ -305,13 +305,13 @@ This function infers the PR name based on the current filename"
   (greview-get-pr-object
    pr-alist
    (lambda (v &rest _)
-     (let* ((head-sha (greview-a/get (greview-a/get v 'head) 'sha))
+     (let* ((head-sha (greview-a-get (greview-a-get v 'head) 'sha))
             (review   (-> parsed-review
-                          (greview-a/assoc 'commit_id head-sha)
-                          (greview-a/assoc 'event kind))))
+                          (greview-a-assoc 'commit_id head-sha)
+                          (greview-a-assoc 'event kind))))
        (greview-post-review
         pr-alist
-        review (lambda (value &rest _)
+        review (lambda (_)
                  (message "OK"))))))))
 
 (defun greview-to-comments (text)
@@ -330,7 +330,7 @@ DIFF TITLE and BODY are strings"
 ;; User facing API ;;
 ;;;;;;;;;;;;;;;;;;;;;
 
-(defun greview/start-review (url)
+(defun greview-start-review (url)
   "Start review given PR URL."
   (interactive "sPR URL:")
   (let* ((pr-alist (greview-pr-from-url url)))
@@ -338,28 +338,28 @@ DIFF TITLE and BODY are strings"
      pr-alist
      ;; Get the diff
      (lambda (v &rest _)
-       (let ((diff (greview-a/get v 'message)))
+       (let ((diff (greview-a-get v 'message)))
          (greview-get-pr-object
           pr-alist
           ;; Get the title and body
           (lambda (v &rest _)
-            (let* ((body (greview-a/get v 'body))
-                   (title (greview-a/get v 'title))
+            (let* ((body (greview-a-get v 'body))
+                   (title (greview-a-get v 'title))
                    (txt (greview-format-diff diff title body)))
               ;; Write everything to a file
               (greview-save-diff pr-alist txt)))))))))
 
-(defun greview/approve ()
+(defun greview-approve ()
   "Approve a PR (to be run from a buffer corresponding to a review)."
   (interactive)
   (greview-submit-review "APPROVE"))
 
-(defun greview/reject ()
+(defun greview-reject ()
   "Reject a PR (to be run from a buffer corresponding to a review)."
   (interactive)
   (greview-submit-review "REQUEST_CHANGES"))
 
-(defun greview/comment ()
+(defun greview-comment ()
   "Comment on a PR (to be run from a buffer corresponding to a review)."
   (interactive)
   (greview-submit-review "COMMENT"))
