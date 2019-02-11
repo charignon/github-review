@@ -97,7 +97,7 @@ CALLBACK to call back when done."
                     :auth 'greview
                     :host greview-host
                     :callback callback
-                    :errorback (lambda (_) (message "Error talking to github"))))
+                    :errorback (lambda (&rest _) (message "Error talking to github"))))
 
 (defun greview-get-pr-object (pr-alist callback)
   "Get a pr object given PR-ALIST an alist representing a PR.
@@ -122,7 +122,7 @@ CALLBACK will be called back when done"
                      :auth 'greview
                      :payload review
                      :host greview-host
-                     :errorback (lambda (_) (message "Error talking to github"))
+                     :errorback (lambda (&rest _) (message "Error talking to github"))
                      :callback callback))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -315,7 +315,7 @@ This function infers the PR name based on the current filename"
                           (greview-a-assoc 'event kind))))
        (greview-post-review
         pr-alist
-        review (lambda (_)
+        review (lambda (&rest _)
                  (message "Done submitting review"))))))))
 
 (defun greview-to-comments (text)
