@@ -58,7 +58,6 @@
   "Return a copy of an alist ALIST."
   (copy-alist alist))
 
-;; Assoc into an alist
 (defun a/assoc (alist key value)
   "Return copy of ALIST where KEY is associated with VALUE."
   (let* ((dup (a/copy alist)))
@@ -259,7 +258,7 @@ ACC is an alist accumulating state."
   "Extract a pr alist from BUFFER-FNAME."
   (let* ((fname (car (last (s-split "/" buffer-fname)))))
     (save-match-data
-      (and (string-match "\\(.*\\)___\\(.*\\)___\\(.*\\)\.diff" fname)
+      (and (string-match "\\(.*\\)___\\(.*\\)___\\([0-9]+\\)\.diff" fname)
            (let* ((pr-alist  (-> (a/empty)
                                  (a/assoc 'owner (match-string 1 fname))
                                  (a/assoc 'repo  (match-string 2 fname))
@@ -269,7 +268,7 @@ ACC is an alist accumulating state."
 (defun pr-from-url (url)
   "Extract a pr alist from a pull request URL."
   (save-match-data
-    (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull/\\(.*\\)" url)
+    (and (string-match ".*/\\(.*\\)/\\(.*\\)/pull/\\([0-9]+\\)" url)
          (let* ((pr-alist  (-> (a/empty)
                                (a/assoc 'owner (match-string 1 url))
                                (a/assoc 'repo  (match-string 2 url))
