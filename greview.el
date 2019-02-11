@@ -48,7 +48,8 @@
   :group 'greview
   :type 'string)
 
-(defconst greview-diffheader '(("Accept" . "application/vnd.github.v3.diff")))
+(defconst greview-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
+  "Header for requesting diffs from Github.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Alist utilities to treat associative lists as immutable data structures  ;;
