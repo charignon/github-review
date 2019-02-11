@@ -1,3 +1,4 @@
+(load-file "./test/test-helper.el")
 (require 'greview)
 (require 'buttercup)
 
@@ -97,6 +98,13 @@ index 58baa4b..eae7707 100644
 (describe "greview-pr-from-fname"
   (it "can parse fname and infer pr name"
     (expect (greview-pr-from-fname "/tmp/charignon___testgheapi___2.diff") :to-equal
+            '((num . "2")
+              (repo . "testgheapi")
+              (owner . "charignon")))))
+
+(describe "greview-pr-from-url"
+  (it "can parse url and infer pr details"
+    (expect (greview-pr-from-url "https://github.com/charignon/testgheapi/pull/2") :to-equal
             '((num . "2")
               (repo . "testgheapi")
               (owner . "charignon")))))
