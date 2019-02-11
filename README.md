@@ -11,7 +11,21 @@ the pull request. Once done, you can submit your review with one of
 
 ## Installation
 
-TBD
+TODO How to install
+
+## Configuration
+
+`greview` needs a github token to act on your behalf for fetching PRs and
+submitting reviews.
+
+Refer to https://github.com/magit/ghub to set up a GHE token compatible with
+`ghub`, the application to use should be `greview`.
+
+tl;dr: add to your ~/.authinfo.gpg something like the following:
+
+```
+machine api.github.com login yourlogin^greview password MYTOKENGOESHERE
+```
 
 ## Customization
 
