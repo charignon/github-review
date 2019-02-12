@@ -1,4 +1,4 @@
-# GReview: code review from the comfort of Emacs.
+# greview: Github code reviews with Emacs.
 
 This package contains a handful of Emacs commands to review github pull request
 wihtout leaving Emacs.
