@@ -334,6 +334,7 @@ DIFF TITLE and BODY are strings"
 ;; User facing API ;;
 ;;;;;;;;;;;;;;;;;;;;;
 
+;;;###autoload
 (defun greview-start-review (url)
   "Start review given PR URL."
   (interactive "sPR URL:")
@@ -353,16 +354,19 @@ DIFF TITLE and BODY are strings"
               ;; Write everything to a file
               (greview-save-diff pr-alist txt)))))))))
 
+;;;###autoload
 (defun greview-approve ()
   "Approve a PR (to be run from a buffer corresponding to a review)."
   (interactive)
   (greview-submit-review "APPROVE"))
 
+;;;###autoload
 (defun greview-reject ()
   "Reject a PR (to be run from a buffer corresponding to a review)."
   (interactive)
   (greview-submit-review "REQUEST_CHANGES"))
 
+;;;###autoload
 (defun greview-comment ()
   "Comment on a PR (to be run from a buffer corresponding to a review)."
   (interactive)
