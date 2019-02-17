@@ -201,48 +201,48 @@ needed to avoid writing convoluted tests"
     (path . ,(greview-a-get c 'path))))
 
 (defun greview-parse-line (acc l)
-    "Reducer function to parse lines in a code review.
+  "Reducer function to parse lines in a code review.
 parse, goes through lines in a diff return an alist with body and comments
 L is a line from the diff.
 ACC is an alist accumulating state."
-    (let* ((pos (greview-a-get acc 'pos))
-           (body (greview-a-get acc 'body))
-           (path (greview-a-get acc 'path))
-           (comments (greview-a-get acc 'comments))
-           (top-level? (equal nil pos))
-           (in-file? (not top-level?)))
-      (cond
-       ;; Previous comments are ignored and don't affect the parsing
-       ((greview-previous-comment? l) acc)
+  (let* ((pos (greview-a-get acc 'pos))
+         (body (greview-a-get acc 'body))
+         (path (greview-a-get acc 'path))
+         (comments (greview-a-get acc 'comments))
+         (top-level? (equal nil pos))
+         (in-file? (not top-level?)))
+    (cond
+     ;; Previous comments are ignored and don't affect the parsing
+     ((greview-previous-comment? l) acc)
 
-       ;; First cgreview-hunk
-       ((and top-level? (greview-hunk? l))
-        (greview-a-assoc acc 'pos 0))
+     ;; First cgreview-hunk
+     ((and top-level? (greview-hunk? l))
+      (greview-a-assoc acc 'pos 0))
 
-       ;; Start of file
-       ((greview-start-of-file? l)
-        (greview-a-assoc (greview-a-assoc acc 'pos nil) 'path (greview-file-path l)))
+     ;; Start of file
+     ((greview-start-of-file? l)
+      (greview-a-assoc (greview-a-assoc acc 'pos nil) 'path (greview-file-path l)))
 
-       ;; Global Comments
-       ((and top-level? (greview-comment? l))
-        (greview-a-assoc acc 'body (concat body (greview-comment-text l) "\n")))
+     ;; Global Comments
+     ((and top-level? (greview-comment? l))
+      (greview-a-assoc acc 'body (concat body (greview-comment-text l) "\n")))
 
-       ;; Local Comments
-       ((and in-file? (greview-comment? l))
-        (greview-a-assoc
-         acc
-         'comments
-         (cons
-          (-> (greview-a-empty)
-              (greview-a-assoc 'position pos)
-              (greview-a-assoc 'path path)
-              (greview-a-assoc 'body (greview-comment-text l)))
-          comments)))
+     ;; Local Comments
+     ((and in-file? (greview-comment? l))
+      (greview-a-assoc
+       acc
+       'comments
+       (cons
+        (-> (greview-a-empty)
+            (greview-a-assoc 'position pos)
+            (greview-a-assoc 'path path)
+            (greview-a-assoc 'body (greview-comment-text l)))
+        comments)))
 
-       ;; Any other line in a file
-       (in-file? (greview-a-assoc acc 'pos (+ 1 pos)))
+     ;; Any other line in a file
+     (in-file? (greview-a-assoc acc 'pos (+ 1 pos)))
 
-       (t acc))))
+     (t acc))))
 
 (defun greview-parse-review-lines (lines)
   "Parse LINES corresponding to a code review."
@@ -313,18 +313,18 @@ ACC is an alist accumulating state."
 This function infers the PR name based on the current filename"
   (let* ((pr-alist (greview-pr-from-fname (buffer-file-name)))
          (parsed-review (greview-parsed-review-from-current-buffer)))
-  (message "Submitting review, this may take a while ...")
-  (greview-get-pr-object
-   pr-alist
-   (lambda (v &rest _)
-     (let* ((head-sha (greview-a-get (greview-a-get v 'head) 'sha))
-            (review   (-> parsed-review
-                          (greview-a-assoc 'commit_id head-sha)
-                          (greview-a-assoc 'event kind))))
-       (greview-post-review
-        pr-alist
-        review (lambda (&rest _)
-                 (message "Done submitting review"))))))))
+    (message "Submitting review, this may take a while ...")
+    (greview-get-pr-object
+     pr-alist
+     (lambda (v &rest _)
+       (let* ((head-sha (greview-a-get (greview-a-get v 'head) 'sha))
+              (review   (-> parsed-review
+                            (greview-a-assoc 'commit_id head-sha)
+                            (greview-a-assoc 'event kind))))
+         (greview-post-review
+          pr-alist
+          review (lambda (&rest _)
+                   (message "Done submitting review"))))))))
 
 (defun greview-to-comments (text)
   "Convert TEXT, a string to a string where each line is prefixed by ~."
