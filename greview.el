@@ -345,7 +345,7 @@ DIFF TITLE and BODY are strings"
 ;;;###autoload
 (defun greview-start-review (url)
   "Start review given PR URL."
-  (interactive "sPR URL:")
+  (interactive "sPR URL: ")
   (let* ((pr-alist (greview-pr-from-url url)))
     (greview-get-pr-diff
      pr-alist
