@@ -1,4 +1,4 @@
-;;; greview.el --- Github based code review -*- lexical-binding: t -*-
+;;; greview.el --- GitHub based code review -*- lexical-binding: t -*-
 ;; Author: Laurent Charignon <l.charignon@gmail.com>
 ;; Maintainer: Laurent Charignon <l.charignon@gmail.com>
 ;; Keywords: git, tools, vc, github
@@ -43,7 +43,7 @@
 ;;;;;;;;;;;;;;;;;;;
 
 (defgroup greview nil
-  "Write and submit github code reviews from within Emacs."
+  "Write and submit GitHub code reviews from within Emacs."
   :group 'tools)
 
 (defcustom greview-review-folder "/tmp"
@@ -52,12 +52,12 @@
   :type 'string)
 
 (defcustom greview-host "api.github.com"
-  "Host for the github api."
+  "Host for the GitHub api."
   :group 'greview
   :type 'string)
 
 (defconst greview-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
-  "Header for requesting diffs from Github.")
+  "Header for requesting diffs from GitHub.")
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Alist utilities to treat associative lists as immutable data structures  ;;
@@ -88,7 +88,7 @@
   '())
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; Communication with github ;;
+;; Communication with GitHub ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun greview-get-pr (pr-alist needs-diff callback)
@@ -105,7 +105,7 @@ CALLBACK to call back when done."
                     :auth 'greview
                     :host greview-host
                     :callback callback
-                    :errorback (lambda (&rest _) (message "Error talking to github"))))
+                    :errorback (lambda (&rest _) (message "Error talking to GitHub"))))
 
 (defun greview-get-pr-object (pr-alist callback)
   "Get a pr object given PR-ALIST an alist representing a PR.
@@ -130,7 +130,7 @@ CALLBACK will be called back when done"
                      :auth 'greview
                      :payload review
                      :host greview-host
-                     :errorback (lambda (&rest _) (message "Error talking to github"))
+                     :errorback (lambda (&rest _) (message "Error talking to GitHub"))
                      :callback callback))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
