@@ -21,8 +21,16 @@
 ;; For a full copy of the GNU General Public License
 ;; see <http://www.gnu.org/licenses/>.
 ;;; Commentary:
-
-;; Github based code review
+;;
+;;`greview` lets you submit GitHub code review with Emacs.
+;;
+;; With `greview-start-review` you can pull the content of a pull request into a buffer
+;; as a diff with comments corresponding to the PR description.
+;; In that buffer you can add comment (global and inline) that you want to make on the pull request.
+;; Once done, you can submit these comments as a code review with one of:
+;; - `greview-approve`
+;; - `greview-comment`
+;; - `greview-reject`.
 
 ;;; Code:
 
