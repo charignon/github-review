@@ -1,4 +1,4 @@
-# greview: Github code reviews with Emacs.
+# greview: GitHub code reviews with Emacs.
 
 This package contains a handful of Emacs commands to review github pull request
 wihtout leaving Emacs.
@@ -58,13 +58,10 @@ TODO How to install (to complete after MELPA PR is merged)
 
 ## Configuration
 
-`greview` needs a github token to act on your behalf for fetching PRs and
+`greview` needs a GitHub token to act on your behalf for fetching PRs and
 submitting reviews.
 
-Refer to https://github.com/magit/ghub to set up a GHE token compatible with
-`ghub`, the application to use should be `greview`.
-
-tl;dr: add to your ~/.authinfo.gpg something like the following:
+Created a personal access token using GitHub (https://github.com/settings/tokens) and add a line to your auth source files with your login and token:
 
 ```
 machine api.github.com login yourlogin^greview password MYTOKENGOESHERE
