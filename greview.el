@@ -202,9 +202,9 @@ needed to avoid writing convoluted tests"
 
 (defun greview-parse-line (acc l)
   "Reducer function to parse lines in a code review.
-parse, goes through lines in a diff return an alist with body and comments
+Analyzes one line in a diff return an alist with two entries: body and comments
 L is a line from the diff.
-ACC is an alist accumulating state."
+ACC is an alist accumulating parsing state."
   (let* ((pos (greview-a-get acc 'pos))
          (body (greview-a-get acc 'body))
          (path (greview-a-get acc 'path))
