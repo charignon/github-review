@@ -3,30 +3,40 @@
 This package contains a handful of Emacs commands to review github pull request
 wihtout leaving Emacs.
 
-
-Start by calling `greview-start-review` and entering a Pull Request url. You will, then be prompted with a buffer containing the diff of the pull request. The diff contains the description of the PR at the top with line starting with `~`. For example:
+You can start by calling `greview-start-review` and entering a Pull Request URL. You will, then be prompted with a buffer containing the diff of the pull request. The diff contains the description of the PR at the top with line starting with `~`. For example, reviewing [this pull request](https://github.com/clojure/clojurescript-site/pull/293) would open the following buffer:
 
 ```diff
-~ Top level previous comment
+~ Fix broken link to closure cheat sheet
+~
+~ The owner of http://www.closurecheatsheet.com/ lost the domain and does not intend to maintain it. This commit replaces the now defunkt link to http://www.closurecheat$
+~ ^M
+~ I also opened an issue on the cheat sheet repo to follow up with the author of the cheat sheet https://github.com/kuzmisin/closurecheatsheet/issues/12.
 diff --git a/content/reference/google-closure-library.adoc b/content/reference/google-closure-library.adoc
 index 58baa4b..eae7707 100644
 --- a/content/reference/google-closure-library.adoc
 +++ b/content/reference/google-closure-library.adoc
 @@ -18,7 +18,7 @@ rich-text editing, and UI widgets/controls.
 
-  ,,* http://google.github.io/closure-library/api/[Google Closure Library
-  API Reference]
+ * http://google.github.io/closure-library/api/[Google Closure Library
+ API Reference]
 -* http://www.closurecheatsheet.com/[Closure Cheatsheet] - abridged API
 +* https://github.com/kuzmisin/closurecheatsheet[Closure Cheatsheet] - abridged API
-  with usage examples
-  [[try-the-wrapper-libraries-first]]
+ with usage examples
+
+ [[try-the-wrapper-libraries-first]]
 ```
 
 You can add comments at the top level by writing lines starting with `#` after the PR description and before the beginning of the diff.
 
-You can add comments inline by adding lines starting with `#` inline. All these features are demonstrated in the example below.
+You can add comments inline by adding lines starting with `#` inline. See these features in the example below:
+
 ```diff
-~ Top level previous comment
+~ Fix broken link to closure cheat sheet
+~
+~ The owner of http://www.closurecheatsheet.com/ lost the domain and does not intend to maintain it. This commit replaces the now defunkt link to http://www.closurecheat$
+~ ^M
+~ I also opened an issue on the cheat sheet repo to follow up with the author of
+the cheat sheet https://github.com/kuzmisin/closurecheatsheet/issues/12.
 # This is a global comment at the top of the file
 # with multiple
 # lines and will be submitted as a top level review comment
@@ -36,8 +46,8 @@ index 58baa4b..eae7707 100644
 +++ b/content/reference/google-closure-library.adoc
 @@ -18,7 +18,7 @@ rich-text editing, and UI widgets/controls.
 
-  ,,* http://google.github.io/closure-library/api/[Google Closure Library
-  API Reference]
+ * http://google.github.io/closure-library/api/[Google Closure Library
+ API Reference]
 -* http://www.closurecheatsheet.com/[Closure Cheatsheet] - abridged API
 +* https://github.com/kuzmisin/closurecheatsheet[Closure Cheatsheet] - abridged API
 # And a comment inline about
@@ -46,8 +56,9 @@ index 58baa4b..eae7707 100644
 # code```
   with usage examples
 # Some other comment inline
+ with usage examples
 
-  [[try-the-wrapper-libraries-first]]
+ [[try-the-wrapper-libraries-first]]
 ```
 
 Once done, you can submit your review with one of `greview-approve`, `greview-comment` and `greview-reject`.
