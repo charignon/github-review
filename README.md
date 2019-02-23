@@ -74,7 +74,7 @@ Add the following to your config:
  github-review
  :recipe
     (:fetcher github
-     :repo "charignon/greview"
+     :repo "charignon/github-review"
      :files ("github-review.el")))
 ```
 
