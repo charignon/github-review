@@ -4,7 +4,7 @@
 (depends-on "s")
 (depends-on "dash")
 
-(package-file "greview.el")
+(package-file "github-review.el")
 
 (development
  (depends-on "undercover")

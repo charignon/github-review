@@ -1,11 +1,11 @@
 (load-file "./test/test-helper.el")
-(require 'greview)
+(require 'github-review)
 (require 'buttercup)
 
-(describe "greview-hunk?"
+(describe "github-review-hunk?"
   (it "can correctly identify a hunk"
-    (expect (greview-hunk? "foo") :to-be nil)
-    (expect (greview-hunk? "@@ b/foo") :to-be t)))
+    (expect (github-review-hunk? "foo") :to-be nil)
+    (expect (github-review-hunk? "@@ b/foo") :to-be t)))
 
 (setq examplediff "# This is a global comment at the top of the file
 # with multiple
@@ -82,36 +82,36 @@ index 58baa4b..eae7707 100644
       (body . "And a comment inline about\na specific line\n```with some\ncode```")
       (path . "content/reference/google-closure-library.adoc")))))
 
-(describe "greview-parse-review-lines"
+(describe "github-review-parse-review-lines"
   (it "can parse a complex code review"
-    (let* ((actual (greview-parse-review-lines (split-string examplediff "\n"))))
+    (let* ((actual (github-review-parse-review-lines (split-string examplediff "\n"))))
       (expect actual :to-equal complex-review-expected)))
   (it "can parse a code review with no comment"
-    (let* ((actual (greview-parse-review-lines (split-string example-no-comment "\n")))
+    (let* ((actual (github-review-parse-review-lines (split-string example-no-comment "\n")))
            (expected '((body . "This is a global comment at the top of the file\nwith multiple\nlines"))))
       (expect actual :to-equal expected)))
   (it "can parse a code review with previous comments but ignores it"
-    (let* ((actual (greview-parse-review-lines (split-string example-previous-comments "\n"))))
+    (let* ((actual (github-review-parse-review-lines (split-string example-previous-comments "\n"))))
       (expect actual :to-equal complex-review-expected))))
 
 
-(describe "greview-pr-from-fname"
+(describe "github-review-pr-from-fname"
   (it "can parse fname and infer pr name"
-    (expect (greview-pr-from-fname "/tmp/charignon___testgheapi___2.diff") :to-equal
+    (expect (github-review-pr-from-fname "/tmp/charignon___testgheapi___2.diff") :to-equal
             '((num . "2")
               (repo . "testgheapi")
               (owner . "charignon")))))
 
-(describe "greview-pr-from-url"
+(describe "github-review-pr-from-url"
   (it "can parse url and infer pr details"
-    (expect (greview-pr-from-url "https://github.com/charignon/testgheapi/pull/2") :to-equal
+    (expect (github-review-pr-from-url "https://github.com/charignon/testgheapi/pull/2") :to-equal
             '((num . "2")
               (repo . "testgheapi")
               (owner . "charignon")))))
 
-(describe "greview-format-diff"
+(describe "github-review-format-diff"
   (it "can format a diff"
-    (expect (greview-format-diff "a\nb\nc" "title\nin\nthree\nlines" "body\npart") :to-equal
+    (expect (github-review-format-diff "a\nb\nc" "title\nin\nthree\nlines" "body\npart") :to-equal
             "~ title
 ~ in
 ~ three
