@@ -1,9 +1,9 @@
-# greview: GitHub code reviews with Emacs.
+# github-review: GitHub code reviews with Emacs.
 
 This package contains a handful of Emacs commands to review github pull request
 wihtout leaving Emacs.
 
-You can start by calling `greview-start-review` and entering a Pull Request URL. You will, then be prompted with a buffer containing the diff of the pull request. The diff contains the description of the PR at the top with line starting with `~`. For example, reviewing [this pull request](https://github.com/clojure/clojurescript-site/pull/293) would open the following buffer:
+You can start by calling `github-review-start-review` and entering a Pull Request URL. You will, then be prompted with a buffer containing the diff of the pull request. The diff contains the description of the PR at the top with line starting with `~`. For example, reviewing [this pull request](https://github.com/clojure/clojurescript-site/pull/293) would open the following buffer:
 
 ```diff
 ~ Fix broken link to closure cheat sheet
@@ -61,7 +61,7 @@ index 58baa4b..eae7707 100644
  [[try-the-wrapper-libraries-first]]
 ```
 
-Once done, you can submit your review with one of `greview-approve`, `greview-comment` and `greview-reject`.
+Once done, you can submit your review with one of `github-review-approve`, `github-review-comment` and `github-review-reject`.
 
 ## Installation
 
@@ -69,16 +69,16 @@ TODO How to install (to complete after MELPA PR is merged)
 
 ## Configuration
 
-`greview` needs a GitHub token to act on your behalf for fetching PRs and
+`github-review` needs a GitHub token to act on your behalf for fetching PRs and
 submitting reviews.
 
 Created a personal access token using GitHub (https://github.com/settings/tokens) and add a line to your auth source files with your login and token:
 
 ```
-machine api.github.com login yourlogin^greview password MYTOKENGOESHERE
+machine api.github.com login yourlogin^github-review password MYTOKENGOESHERE
 ```
 
 ## Customization
 
-If you use github entreprise, you can use the `greview-host` custom variable to
+If you use github entreprise, you can use the `github-review-host` custom variable to
 configure the endpoint of your github entreprise installation.
