@@ -65,6 +65,21 @@ Once done, you can submit your review with one of `github-review-approve`, `gith
 
 ## Installation
 
+### With doom emacs
+
+Add the following to your config:
+
+```emacs-lisp
+(package!
+ github-review
+ :recipe
+    (:fetcher github
+     :repo "charignon/greview"
+     :files ("github-review.el")))
+```
+
+
+### With melpa
 TODO How to install (to complete after MELPA PR is merged)
 
 ## Configuration
