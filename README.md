@@ -3,7 +3,7 @@
 This package contains a handful of Emacs commands to review github pull request
 wihtout leaving Emacs.
 
-You can start by calling `github-review-start-review` and entering a Pull Request URL. You will, then be prompted with a buffer containing the diff of the pull request. The diff contains the description of the PR at the top with line starting with `~`. For example, reviewing [this pull request](https://github.com/clojure/clojurescript-site/pull/293) would open the following buffer:
+You can start by calling `github-review-start` and entering a Pull Request URL. You will, then be prompted with a buffer containing the diff of the pull request. The diff contains the description of the PR at the top with line starting with `~`. For example, reviewing [this pull request](https://github.com/clojure/clojurescript-site/pull/293) would open the following buffer:
 
 ```diff
 ~ Fix broken link to closure cheat sheet
