@@ -3,6 +3,4 @@
 (when (require 'undercover nil t)
   (undercover "*.el" (:send-report nil)))
 
-(require 'github-review)
-
 ;;; test-helper.el ends here
