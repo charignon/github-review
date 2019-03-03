@@ -144,9 +144,11 @@ CALLBACK will be called back when done"
   "Return t if L, a string mark the start of a github-review-hunk."
   (string-prefix-p "@@" l))
 
-(defun github-review-start-of-file? (l)
-  "Return t if L, a string mark the start of a file."
-  (string-prefix-p "+++" l))
+(defun github-review-non-null-filename-hunk-line? (l)
+  "Return t if L, a string is filename hunk like not representing /dev/null."
+  (and (or (string-prefix-p "+++" l)
+           (string-prefix-p "---" l))
+       (not (string-prefix-p "/dev/null" (substring l 4)))))
 
 (defun github-review-comment? (l)
   "Return t if L, a string, is a comment."
@@ -223,7 +225,7 @@ ACC is an alist accumulating parsing state."
       (github-review-a-assoc acc 'pos 0))
 
      ;; Start of file
-     ((github-review-start-of-file? l)
+     ((github-review-non-null-filename-hunk-line? l)
       (github-review-a-assoc (github-review-a-assoc acc 'pos nil) 'path (github-review-file-path l)))
 
      ;; Global Comments
