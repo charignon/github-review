@@ -7,7 +7,31 @@
     (expect (github-review-hunk? "foo") :to-be nil)
     (expect (github-review-hunk? "@@ b/foo") :to-be t)))
 
-(setq examplediff "# This is a global comment at the top of the file
+(defconst example-review-deleted-file "# comment test
+~ remove bad
+~
+~
+diff --git a/bar b/bar
+deleted file mode 100644
+index 8ad537d..0000000
+--- a/bar
++++ /dev/null
+@@ -1,5 +0,0 @@
+-sdasdas
+-dsadasdsad
+-sadasdasdas
+-as
+-
+# Comment test")
+
+(defconst expected-review-deleted-file
+  '((body . "comment test")
+    (comments
+     ((position . 5)
+      (body . "Comment test")
+      (path . "bar")))))
+
+(defconst examplediff "# This is a global comment at the top of the file
 # with multiple
 # lines
 diff --git a/content/reference/google-closure-library.adoc b/content/reference/google-closure-library.adoc
@@ -30,7 +54,7 @@ index 58baa4b..eae7707 100644
   [[try-the-wrapper-libraries-first]]
 ")
 
-(setq example-previous-comments "~ Top level previous comment
+(defconst example-previous-comments "~ Top level previous comment
 # This is a global comment at the top of the file
 # with multiple
 # lines
@@ -55,7 +79,8 @@ index 58baa4b..eae7707 100644
 
   [[try-the-wrapper-libraries-first]]
 ")
-(setq example-no-comment "# This is a global comment at the top of the file
+
+(defconst example-no-comment "# This is a global comment at the top of the file
 # with multiple
 # lines
 diff --git a/content/reference/google-closure-library.adoc b/content/reference/google-closure-library.adoc
@@ -90,6 +115,9 @@ index 58baa4b..eae7707 100644
     (let* ((actual (github-review-parse-review-lines (split-string example-no-comment "\n")))
            (expected '((body . "This is a global comment at the top of the file\nwith multiple\nlines"))))
       (expect actual :to-equal expected)))
+  (it "can parse a code review with deleted files"
+    (let* ((actual (github-review-parse-review-lines (split-string example-review-deleted-file "\n"))))
+      (expect actual :to-equal expected-review-deleted-file)))
   (it "can parse a code review with previous comments but ignores it"
     (let* ((actual (github-review-parse-review-lines (split-string example-previous-comments "\n"))))
       (expect actual :to-equal complex-review-expected))))
