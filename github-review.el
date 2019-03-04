@@ -56,6 +56,11 @@
   :group 'github-review
   :type 'string)
 
+(defcustom github-review-fetch-top-level-and-review-comments nil
+  "If t, fetch the top level and review comments."
+  :group 'github-review
+  :type 'boolean)
+
 (defconst github-review-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
   "Header for requesting diffs from GitHub.")
 
@@ -90,6 +95,22 @@
   "Return an empty alist."
   '())
 
+(defconst github-review-url-scheme
+  '((get-pr . "/repos/%s/%s/pulls/%s")
+    (get-inline-comments . "/repos/%s/%s/pulls/%s/comments")
+    (get-review-comments . "/repos/%s/%s/pulls/%s/reviews")
+    (get-issue-comments . "/repos/%s/%s/issues/%s/comments")
+    (submit-review . "/repos/%s/%s/pulls/%s/reviews")))
+
+(defun github-review-format-pr-url (kind pr-alist)
+  "Format a url for accessing the pr.
+KIND is the kind of information to request.
+PR-ALIST is an alist represenging the PR"
+  (format (github-review-a-get github-review-url-scheme kind)
+          (github-review-a-get pr-alist 'owner )
+          (github-review-a-get pr-alist 'repo )
+          (github-review-a-get pr-alist 'num )))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Communication with GitHub ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -99,16 +120,14 @@
 PR-ALIST is an alist representing a PR,
 NEEDS-DIFF t to return a diff nil to return the pr object
 CALLBACK to call back when done."
-  (ghub-get (format "/repos/%s/%s/pulls/%s"
-                    (github-review-a-get pr-alist 'owner )
-                    (github-review-a-get pr-alist 'repo )
-                    (github-review-a-get pr-alist 'num )) nil
-                    :unpaginate t
-                    :headers (if needs-diff github-review-diffheader '())
-                    :auth 'github-review
-                    :host github-review-host
-                    :callback callback
-                    :errorback (lambda (&rest _) (message "Error talking to GitHub"))))
+  (ghub-get (github-review-format-pr-url 'get-pr pr-alist)
+             nil
+             :unpaginate t
+             :headers (if needs-diff github-review-diffheader '())
+             :auth 'github-review
+             :host github-review-host
+             :callback callback
+             :errorback (lambda (&rest _) (message "Error talking to GitHub"))))
 
 (defun github-review-get-pr-object (pr-alist callback)
   "Get a pr object given PR-ALIST an alist representing a PR.
@@ -120,21 +139,87 @@ CALLBACK is called with the result"
 CALLBACK is called with the result"
   (github-review-get-pr pr-alist t callback))
 
-
 (defun github-review-post-review (pr-alist review callback)
   "Submit a code review.
 PR-ALIST is an alist representing a PR
 REVIEW is the review alist
 CALLBACK will be called back when done"
-  (ghub-post (format "/repos/%s/%s/pulls/%s/reviews"
-                     (github-review-a-get pr-alist 'owner )
-                     (github-review-a-get pr-alist 'repo )
-                     (github-review-a-get pr-alist 'num )) nil
-                     :auth 'github-review
-                     :payload review
-                     :host github-review-host
-                     :errorback (lambda (&rest _) (message "Error talking to GitHub"))
-                     :callback callback))
+  (ghub-post (github-review-format-pr-url 'submit-review pr-alist)
+             nil
+             :auth 'github-review
+             :payload review
+             :host github-review-host
+             :errorback (lambda (&rest _) (message "Error talking to GitHub"))
+             :callback callback))
+
+(defun github-review-get-inline-comments (pr-alist callback)
+  "Get the inline comments on a pr.
+PR-ALIST is an alist representing a PR
+CALLBACK will be called back when done"
+  (ghub-get (github-review-format-pr-url 'get-inline-comments pr-alist)
+            nil
+            :auth 'github-review
+            :host github-review-host
+            :errorback (lambda (&rest _) (message "Error talking to GitHub"))
+            :callback callback))
+
+(defun github-review-get-reviews (pr-alist callback)
+  "Get the code reviews on a PR.
+PR-ALIST is an alist representing a PR
+CALLBACK will be called back when done"
+  (ghub-get (github-review-format-pr-url 'get-review-comments pr-alist)
+            nil
+            :auth 'github-review
+            :host github-review-host
+            :errorback (lambda (&rest _) (message "Error talking to GitHub"))
+            :callback callback))
+
+(defun github-review-get-issue-comments (pr-alist callback)
+  "Get the top level comments on a PR.
+PR-ALIST is an alist representing a PR
+CALLBACK will be called back when done"
+  (ghub-get (github-review-format-pr-url 'get-issue-comments pr-alist)
+            nil
+            :auth 'github-review
+            :host github-review-host
+            :errorback (lambda (&rest _) (message "Error talking to GitHub"))
+            :callback callback))
+
+(defun github-review-chain-call (arg ctx cb)
+  "Run one function of a chain of functions.
+See `github-review-chain-calls' for more information.
+ARG is passed as the first argument of every callback in the chain.
+CB is called if the chain is done.
+CTX is propagated between calls in the chain.
+See github-review-chain-api-calls for more information"
+  (let ((chain (github-review-a-get ctx 'chain)))
+  (if (eq nil chain)
+    (funcall cb ctx) ;; Last function in the chain
+    (let* ((nextnode (car chain))
+           (fn (github-review-a-get nextnode 'function))
+           (fncallback (github-review-a-get nextnode 'callback))
+           (key (github-review-a-get nextnode 'key))
+           (newctx (github-review-a-assoc ctx 'chain (cdr chain))))
+      (funcall fn arg
+               (lambda (v &rest _)
+                 (github-review-chain-call
+                  arg
+                 (if key
+                     (github-review-a-assoc newctx key v)
+                     (funcall fncallback v newctx))
+                 cb)))))))
+
+(defun github-review-chain-calls (arg cb chain)
+  "Run a chain of functions.
+CHAIN is a list of ALIST containing 'function and ('callback or 'key)
+callback are called with ARG and a CTX (alist) in that order.
+KEY can be used instead of callback if the result should be stored in key.
+The result of the call to the callback should be the new CTX.
+ARG is the first argument that every function in the chain will be taking
+CB is the final callback to call with the resulting aggregate object
+
+For an example of how to use it, look at the tests"
+  (github-review-chain-call arg `((chain . ,chain)) cb))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Code review file parsing ;;
@@ -188,7 +273,6 @@ NEW-COMMENT is a comment to consider"
 
      ;; Cannot merge the current comment with the last comment
      (t (github-review-a-assoc (github-review-a-assoc acc 'merged (cons lastcomment merged)) 'lastcomment new-comment)))))
-
 
 (defun github-review-merge-comments (comments)
   "Takes COMMENTS, inline comments and return a merged list of comments.
@@ -291,7 +375,6 @@ ACC is an alist accumulating parsing state."
                                (github-review-a-assoc 'num   (match-string 3 url)))))
            pr-alist))))
 
-
 (defun github-review-save-diff (pr-alist diff)
   "Save a DIFF (string) to a temp file named after pr specified by PR-ALIST."
   (find-file (format "%s/%s___%s___%s.diff"
@@ -335,37 +418,99 @@ This function infers the PR name based on the current filename"
   "Convert TEXT, a string to a string where each line is prefixed by ~."
   (s-join "\n" (-map (lambda (x) (concat "~ " x)) (s-split "\n" text))))
 
-(defun github-review-format-diff (diff title body)
+(defun github-review-format-top-level-comment (com)
+  "Format a top level COM objectto string."
+  (let ((username (github-review-a-get (github-review-a-get com 'user) 'login))
+        (body (github-review-a-get com 'body)))
+    (format "@%s: %s" username body)))
+
+(defun github-review-format-review (review)
+  "Format a REVIEW object to string."
+  (let ((username (github-review-a-get (github-review-a-get review 'user) 'login))
+        (state (github-review-a-get review 'state))
+        (body (github-review-a-get review 'body)))
+    (format "Reviewed by @%s[%s]: %s" username state body)))
+
+(defun github-review-format-diff (ctx)
   "Formats a diff to save it for review.
-DIFF TITLE and BODY are strings"
+CTX is the result of a callback chain to get information about a PR.
+See ‘github-review-start’ for more information"
+  (let* ((ob (github-review-a-get ctx 'object))
+         (title (github-review-a-get ob 'title))
+         (body (github-review-a-get ob 'body))
+         (top-level-comments (github-review-a-get ctx 'top-level-comments))
+         (reviews (github-review-a-get ctx 'reviews))
+         (diff (-> ctx (github-review-a-get 'diff) (github-review-a-get 'message))))
   (concat
-   (github-review-to-comments title) "\n~" "\n"
-   (github-review-to-comments body) "\n"
-   diff))
+   (github-review-to-comments title)
+   "\n~"
+   "\n"
+   (github-review-to-comments body)
+   "\n"
+   (when top-level-comments
+     (concat (s-join
+              "\n"
+              (-map
+               #'github-review-to-comments
+               (-map #'github-review-format-top-level-comment top-level-comments)))
+             "\n"))
+   (when reviews
+     (concat (s-join
+              "\n"
+              (-map
+               #'github-review-to-comments
+               (-map #'github-review-format-review reviews)))
+             "\n"))
+   diff)))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; User facing API ;;
 ;;;;;;;;;;;;;;;;;;;;;
+
+(defun github-review-chain ()
+  "Return alist representing sequence of operations to get a PR's information.
+Gets the PR diff, object, top level comments, and code reviews."
+  ;; Get the diff
+  `(((function . github-review-get-pr-diff)
+     (key . diff))
+
+    ;; ... the PR object
+    ((function . github-review-get-pr-object)
+     (callback . (lambda (v ctx &rest _)
+                   (let* ((comms (github-review-a-get v 'comments))
+                          (review_comments (github-review-a-get v 'review_comments))
+                          (chain (github-review-a-get v 'chain)))
+                     ;; And top level comments if there is any
+                     (when (and github-review-fetch-top-level-and-review-comments
+                                (> comms 0))
+                       (setq chain (cons `((function . github-review-get-issue-comments)
+                                           (key . top-level-comments))
+                                         chain)))
+                     ;; And code review if there is any
+                     (when (and github-review-fetch-top-level-and-review-comments
+                                (> review_comments 0))
+                       (setq chain (cons `((function . github-review-get-reviews)
+                                           (key . reviews))
+                                         chain)))
+                     (-> ctx
+                         (github-review-a-assoc 'object v)
+                         (github-review-a-assoc 'chain chain))))))))
 
 ;;;###autoload
 (defun github-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
   (let* ((pr-alist (github-review-pr-from-url url)))
-    (github-review-get-pr-diff
+    (github-review-chain-calls
      pr-alist
-     ;; Get the diff
-     (lambda (v &rest _)
-       (let ((diff (github-review-a-get v 'message)))
-         (github-review-get-pr-object
-          pr-alist
-          ;; Get the title and body
-          (lambda (v &rest _)
-            (let* ((body (github-review-a-get v 'body))
-                   (title (github-review-a-get v 'title))
-                   (txt (github-review-format-diff diff title body)))
-              ;; Write everything to a file
-              (github-review-save-diff pr-alist txt)))))))))
+     ;; Callback when done
+     (lambda (ctx)
+       (github-review-save-diff
+        pr-alist
+        (github-review-format-diff ctx)))
+
+     (github-review-chain)
+     )))
 
 ;;;###autoload
 (defun github-review-approve ()
