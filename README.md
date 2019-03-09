@@ -61,7 +61,13 @@ index 58baa4b..eae7707 100644
  [[try-the-wrapper-libraries-first]]
 ```
 
-Once done, you can submit your review with one of `github-review-approve`, `github-review-comment` and `github-review-reject`.
+Once done, you can submit your review with one of `github-review-approve`, `github-review-comment`, and `github-review-reject`.
+
+## Usage with Forge
+
+You can use `github-review` with `forget`(https://github.com/magit/forge).
+When your cursor is over a pull request, you can call `github-review-forge-pr-at-point` to start a code
+review.
 
 ## Installation
 
