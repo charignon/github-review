@@ -445,7 +445,8 @@ See ‘github-review-start’ for more information"
    (github-review-to-comments title)
    "\n~"
    "\n"
-   (github-review-to-comments body)
+   ;; Github PR body contains \n\r for new lines
+   (github-review-to-comments (s-replace "\r" "" body))
    "\n"
    (when top-level-comments
      (concat (s-join
