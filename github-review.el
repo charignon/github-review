@@ -498,7 +498,7 @@ Gets the PR diff, object, top level comments, and code reviews."
 
 
 (defun github-review-start-internal (pr-alist)
-  "Start review given PR URL."
+  "Start review given PR URL given PR-ALIST."
     (github-review-chain-calls
      pr-alist
      ;; Callback when done
