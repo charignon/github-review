@@ -65,7 +65,7 @@ Once done, you can submit your review with one of `github-review-approve`, `gith
 
 ## Usage with Forge
 
-You can use `github-review` with `forget`(https://github.com/magit/forge).
+You can use `github-review` with `forge`(https://github.com/magit/forge).
 When your cursor is over a pull request, you can call `github-review-forge-pr-at-point` to start a code
 review.
 
