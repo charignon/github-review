@@ -298,7 +298,27 @@ index 58baa4b..eae7707 100644
         (it "can render a diff"
           (let ((github-review-fetch-top-level-and-review-comments t))
             (github-review-start "https://github.com/charignon/github-review/pull/6")
-            (expect diff :to-equal expected-review-tl-comment)))))))
+            (expect diff :to-equal expected-review-tl-comment))))
+
+      (describe "with review that has no top level comment"
+        (before-each
+          (setf
+           (symbol-function 'github-review-get-reviews)
+           (lambda (_ cb)
+             (funcall cb `(((user . ((login . "babar")))
+                            (state . "APPROVED")
+                            (body . "")))))
+           (symbol-function 'github-review-get-pr-object)
+                (lambda (_ cb)
+                  (funcall cb
+                           '((body . "body\npart")
+                             (comments . 0)
+                             (review_comments . 1)
+                             (title . "title\nin\nthree\nlines"))))))
+        (it "does not show it"
+          (let ((github-review-fetch-top-level-and-review-comments t))
+            (github-review-start "https://github.com/charignon/github-review/pull/6")
+            (expect diff :to-equal simple-context-expected-review)))))))
 
 (provide 'github-review-test)
 

@@ -439,7 +439,10 @@ See ‘github-review-start’ for more information"
          (title (github-review-a-get ob 'title))
          (body (github-review-a-get ob 'body))
          (top-level-comments (github-review-a-get ctx 'top-level-comments))
-         (reviews (github-review-a-get ctx 'reviews))
+         (reviews (-reject
+                   (lambda (x)
+                     (string= (github-review-a-get x 'body) ""))
+                   (github-review-a-get ctx 'reviews)))
          (diff (-> ctx (github-review-a-get 'diff) (github-review-a-get 'message))))
   (concat
    (github-review-to-comments title)
