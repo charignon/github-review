@@ -349,7 +349,7 @@ ACC is an alist accumulating parsing state."
     (if (equal nil merged-comments)
         `((body . ,parsed-body))
       `((body . ,parsed-body)
-        (comments . ,(-map #'github-review-normalize-comment merged-comments))))))
+        (comments . ,(reverse (-map #'github-review-normalize-comment merged-comments)))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Buffer interactions ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
