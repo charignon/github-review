@@ -139,11 +139,11 @@ index 58baa4b..eae7707 100644
     (defconst complex-review-expected
       '((body . "This is a global comment at the top of the file\nwith multiple\nlines")
         (comments
-         ((position . 6)
-          (body . "Some other comment inline")
-          (path . "content/reference/google-closure-library.adoc"))
          ((position . 5)
           (body . "And a comment inline about\na specific line\n```with some\ncode```")
+          (path . "content/reference/google-closure-library.adoc"))
+         ((position . 6)
+          (body . "Some other comment inline")
           (path . "content/reference/google-closure-library.adoc")))))
 
     (describe "github-review-parse-review-lines"
