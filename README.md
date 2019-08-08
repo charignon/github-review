@@ -1,3 +1,5 @@
+[![MELPA](https://melpa.org/packages/github-review-badge.svg)](https://melpa.org/#/github-review)
+
 # github-review: GitHub code reviews with Emacs.
 
 This package contains a handful of Emacs commands to review github pull request
