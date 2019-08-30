@@ -78,7 +78,9 @@ index 58baa4b..eae7707 100644
 --- a/content/reference/google-closure-library.adoc
 +++ b/content/reference/google-closure-library.adoc
 @@ -18,7 +18,7 @@ rich-text editing, and UI widgets/controls.
+# comment on zeroth line
 
+# comment on first line
   ,,* http://google.github.io/closure-library/api/[Google Closure Library
   API Reference]
 -* http://www.closurecheatsheet.com/[Closure Cheatsheet] - abridged API
@@ -139,12 +141,26 @@ index 58baa4b..eae7707 100644
     (defconst complex-review-expected
       '((body . "This is a global comment at the top of the file\nwith multiple\nlines")
         (comments
+         ((position . 1)
+          (body . "comment on zeroth line\ncomment on first line")
+          (path . "content/reference/google-closure-library.adoc"))
          ((position . 5)
           (body . "And a comment inline about\na specific line\n```with some\ncode```")
           (path . "content/reference/google-closure-library.adoc"))
          ((position . 6)
           (body . "Some other comment inline")
           (path . "content/reference/google-closure-library.adoc")))))
+
+    (defconst complex-review-expected-no-comment-on-zeroth-and-first-line
+      '((body . "This is a global comment at the top of the file\nwith multiple\nlines")
+        (comments
+         ((position . 5)
+          (body . "And a comment inline about\na specific line\n```with some\ncode```")
+          (path . "content/reference/google-closure-library.adoc"))
+         ((position . 6)
+          (body . "Some other comment inline")
+          (path . "content/reference/google-closure-library.adoc")))))
+
 
     (describe "github-review-parse-review-lines"
       (it "can parse a complex code review"
@@ -159,7 +175,7 @@ index 58baa4b..eae7707 100644
           (expect actual :to-equal expected-review-deleted-file)))
       (it "can parse a code review with previous comments but ignores it"
         (let* ((actual (github-review-parse-review-lines (split-string example-previous-comments "\n"))))
-          (expect actual :to-equal complex-review-expected)))))
+          (expect actual :to-equal complex-review-expected-no-comment-on-zeroth-and-first-line)))))
 
   (describe "PR name inference from review filename and url"
 
