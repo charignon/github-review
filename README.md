@@ -2,8 +2,8 @@
 
 # github-review: GitHub code reviews with Emacs.
 
-This package contains a handful of Emacs commands to review github pull request
-wihtout leaving Emacs.
+This package contains a handful of Emacs commands to review GitHub pull request
+without leaving Emacs.
 
 You can start by calling `github-review-start` and entering a Pull Request URL. You will, then be prompted with a buffer containing the diff of the pull request. The diff contains the description of the PR at the top with line starting with `~`. For example, reviewing [this pull request](https://github.com/clojure/clojurescript-site/pull/293) would open the following buffer:
 
@@ -28,7 +28,7 @@ index 58baa4b..eae7707 100644
  [[try-the-wrapper-libraries-first]]
 ```
 
-You can add comments at the top level by writing lines starting with `#` after the PR description and before the beginning of the diff.
+You can add comments at the top-level by writing lines starting with `#` after the PR description and before the beginning of the diff.
 
 You can add comments inline by adding lines starting with `#` inline. See these features in the example below:
 
@@ -95,7 +95,7 @@ Add the following to your config:
 `github-review` needs a GitHub token to act on your behalf for fetching PRs and
 submitting reviews.
 
-Created a personal access token using GitHub (https://github.com/settings/tokens) and add a line to your auth source files with your login and token:
+Create a personal access token using GitHub (https://github.com/settings/tokens) and add a line to your auth source files with your login and token:
 
 ```
 machine api.github.com login yourlogin^github-review password MYTOKENGOESHERE
@@ -103,8 +103,8 @@ machine api.github.com login yourlogin^github-review password MYTOKENGOESHERE
 
 ## Customization
 
-If you use github entreprise, you can use the `github-review-host` custom variable to
-configure the endpoint of your github entreprise installation.
+If you use GitHub Enterprise, you can use the `github-review-host` custom variable to
+configure the endpoint of your GitHub Enterprise installation.
 
-By default `github-review` only fetches the PR title summary and diff. You can set `github-review-fetch-top-level-and-review-comments` to `t` to
-enable fetching top level and review comments.
+By default, `github-review` only fetches the PR title summary and diff. You can set `github-review-fetch-top-level-and-review-comments` to `t` to
+enable fetching top-level and review comments.
