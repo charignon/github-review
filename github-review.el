@@ -521,7 +521,7 @@ Gets the PR diff, object, top level comments, and code reviews."
 (defun github-review-forge-pr-at-point ()
   "Review the forge pull request at point."
   (interactive)
-  (let* ((pullreq (forge-pullreq-at-point))
+  (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
          (repo (forge-get-repository pullreq))
          (owner (oref repo owner))
          (name (oref repo name))
