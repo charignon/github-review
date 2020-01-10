@@ -336,6 +336,12 @@ index 58baa4b..eae7707 100644
             (github-review-start "https://github.com/charignon/github-review/pull/6")
             (expect diff :to-equal simple-context-expected-review)))))))
 
+(describe "Api host computation"
+  (it "defaults to api.github.com"
+    (expect (github-review-api-host (github-review-a-empty)) :to-equal "api.github.com"))
+  (it "can be overriden"
+    (expect (github-review-api-host (-> (github-review-a-empty) (github-review-a-assoc 'apihost "api.github.biz"))) :to-equal "api.github.biz")))
+
 (provide 'github-review-test)
 
 ;;; github-review-test.el ends here
