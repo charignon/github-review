@@ -70,6 +70,59 @@ index 8ad537d..0000000
           (body . "Comment test")
           (path . "bar")))))
 
+    (defconst example-review-deleted-comment-haskell "# comment test
+~ remove bad
+~
+~
+diff --git a/bar b/bar
+deleted file mode 100644
+index 8ad537d..0000000
+--- a/bar
++++ /dev/null
+@@ -1,5 +0,0 @@
+--- This is a comment
+-dsadasdsad
+-sadasdasdas
+-as
+-
+# Comment test
+diff --git a/hledger-lib/Hledger/Reports/MultiBalanceReport.hs b/hledger-lib/Hledger/Reports/MultiBalanceReport.hs
+index 9eced0230..4512bb335 100644
+--- a/hledger-lib/Hledger/Reports/MultiBalanceReport.hs
++++ b/hledger-lib/Hledger/Reports/MultiBalanceReport.hs
+@@ -47,8 +47,6 @@ import Hledger.Reports.BalanceReport
+ --
+ --   * the full account name
+ --
+---   * the leaf account name
+---
+ --   * the account's depth
+# here too
+ --
+ --   * A list of amounts, one for each column.
+@@ -60,8 +58,8 @@ import Hledger.Reports.BalanceReport
+ -- 3. the column totals, and the overall grand total (or zero for
+ -- cumulative/historical reports) and grand average.
+
+-type MultiBalanceReport    = PeriodicReport AccountLeaf MixedAmount
+-type MultiBalanceReportRow = PeriodicReportRow AccountLeaf MixedAmount
++type MultiBalanceReport    = PeriodicReport AccountName MixedAmount
++type MultiBalanceReportRow = PeriodicReportRow AccountName MixedAmount
+
+ -- type alias just to remind us which AccountNames might be depth-clipped, below.
+ type ClippedAccountName = AccountName
+")
+
+    (defconst expected-review-deleted-comment-haskell
+      '((body . "comment test")
+        (comments
+         ((position . 5)
+          (body . "Comment test")
+          (path . "bar"))
+         ((position . 6)
+          (body . "here too")
+          (path . "hledger-lib/Hledger/Reports/MultiBalanceReport.hs")))))
+
     (defconst examplediff "# This is a global comment at the top of the file
 # with multiple
 # lines
@@ -173,6 +226,9 @@ index 58baa4b..eae7707 100644
       (it "can parse a code review with deleted files"
         (let* ((actual (github-review-parse-review-lines (split-string example-review-deleted-file "\n"))))
           (expect actual :to-equal expected-review-deleted-file)))
+      (it "can parse a code review with a removed comment in haskell"
+        (let* ((actual (github-review-parse-review-lines (split-string example-review-deleted-comment-haskell "\n"))))
+          (expect actual :to-equal expected-review-deleted-comment-haskell)))
       (it "can parse a code review with previous comments but ignores it"
         (let* ((actual (github-review-parse-review-lines (split-string example-previous-comments "\n"))))
           (expect actual :to-equal complex-review-expected-no-comment-on-zeroth-and-first-line)))))

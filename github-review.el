@@ -246,6 +246,10 @@ For an example of how to use it, look at the tests"
   "Return t if L, a string, is a comment from previous review."
   (string-prefix-p "~ " l))
 
+(defun github-review-is-start-of-file-hunk? (l)
+  "Return t if L, a string that start with 'diff' marking the start of a file hunk."
+  (string-prefix-p "diff" l))
+
 (defun github-review-file-path (l)
   "Extract the file path in L, a string.
 L should looks like +++ b/content/reference/google-closure-library.adoc"
@@ -312,8 +316,8 @@ ACC is an alist accumulating parsing state."
       (github-review-a-assoc acc 'pos 0))
 
      ;; Start of file
-     ((github-review-non-null-filename-hunk-line? l)
-      (github-review-a-assoc (github-review-a-assoc acc 'pos nil) 'path (github-review-file-path l)))
+     ((and top-level? (github-review-non-null-filename-hunk-line? l)
+      (github-review-a-assoc (github-review-a-assoc acc 'pos nil) 'path (github-review-file-path l))))
 
      ;; Global Comments
      ((and top-level? (github-review-comment? l))
@@ -333,6 +337,9 @@ ACC is an alist accumulating parsing state."
             (github-review-a-assoc 'path path)
             (github-review-a-assoc 'body (github-review-comment-text l)))
         comments)))
+
+     ;; Header before the filenames, restart the position
+     ((github-review-is-start-of-file-hunk? l) (github-review-a-assoc acc 'pos nil))
 
      ;; Any other line in a file
      (in-file? (github-review-a-assoc acc 'pos (+ 1 pos)))
