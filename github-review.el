@@ -114,6 +114,9 @@ PR-ALIST is an alist represenging the PR"
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Communication with GitHub ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+(defun github-review-api-host (pr-alist)
+  "Return the api host for a PR-ALIST."
+  (or (github-review-a-get pr-alist 'apihost) github-review-host))
 
 (defun github-review-get-pr (pr-alist needs-diff callback)
   "Get a pull request or its diff.
@@ -125,7 +128,7 @@ CALLBACK to call back when done."
              :unpaginate t
              :headers (if needs-diff github-review-diffheader '())
              :auth 'github-review
-             :host github-review-host
+             :host (github-review-api-host pr-alist)
              :callback callback
              :errorback (lambda (&rest _) (message "Error talking to GitHub"))))
 
@@ -148,7 +151,7 @@ CALLBACK will be called back when done"
              nil
              :auth 'github-review
              :payload review
-             :host github-review-host
+             :host (github-review-api-host pr-alist)
              :errorback (lambda (&rest _) (message "Error talking to GitHub"))
              :callback callback))
 
@@ -159,7 +162,7 @@ CALLBACK will be called back when done"
   (ghub-get (github-review-format-pr-url 'get-inline-comments pr-alist)
             nil
             :auth 'github-review
-            :host github-review-host
+            :host (github-review-api-host pr-alist)
             :errorback (lambda (&rest _) (message "Error talking to GitHub"))
             :callback callback))
 
@@ -170,7 +173,7 @@ CALLBACK will be called back when done"
   (ghub-get (github-review-format-pr-url 'get-review-comments pr-alist)
             nil
             :auth 'github-review
-            :host github-review-host
+            :host (github-review-api-host pr-alist)
             :errorback (lambda (&rest _) (message "Error talking to GitHub"))
             :callback callback))
 
@@ -181,7 +184,7 @@ CALLBACK will be called back when done"
   (ghub-get (github-review-format-pr-url 'get-issue-comments pr-alist)
             nil
             :auth 'github-review
-            :host github-review-host
+            :host (github-review-api-host pr-alist)
             :errorback (lambda (&rest _) (message "Error talking to GitHub"))
             :callback callback))
 
@@ -525,10 +528,12 @@ Gets the PR diff, object, top level comments, and code reviews."
          (repo (forge-get-repository pullreq))
          (owner (oref repo owner))
          (name (oref repo name))
+         (apihost (oref repo apihost))
          (number (oref pullreq number))
          (pr-alist (-> (github-review-a-empty)
                        (github-review-a-assoc 'owner owner)
                        (github-review-a-assoc 'repo  name)
+                       (github-review-a-assoc 'apihost apihost)
                        (github-review-a-assoc 'num   number))))
          (github-review-start-internal pr-alist)))
 
