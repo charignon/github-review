@@ -79,13 +79,15 @@ This is the preferred way of installing this package.
 
 ### With doom emacs
 
-Add the following to your config:
+`github-review` gets installed automatically if you are using the `magit` module.
+
+If you just want to install `github-review` separately, add the following to your config:
 
 ```emacs-lisp
 (package!
  github-review
  :recipe
-    (:fetcher github
+    (:host github
      :repo "charignon/github-review"
      :files ("github-review.el")))
 ```
