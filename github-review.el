@@ -56,7 +56,7 @@
   :group 'github-review
   :type 'string)
 
-(defcustom github-review-fetch-top-level-and-review-comments nil
+(defcustom github-review-fetch-top-level-and-review-comments t
   "If t, fetch the top level and review comments."
   :group 'github-review
   :type 'boolean)
