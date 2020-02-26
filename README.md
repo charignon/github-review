@@ -108,5 +108,4 @@ machine api.github.com login yourlogin^github-review password MYTOKENGOESHERE
 If you use GitHub Enterprise, you can use the `github-review-host` custom variable to
 configure the endpoint of your GitHub Enterprise installation.
 
-By default, `github-review` only fetches the PR title summary and diff. You can set `github-review-fetch-top-level-and-review-comments` to `t` to
-enable fetching top-level and review comments.
+By default, `github-review` fetches all comments in a pull request. You can set `github-review-fetch-top-level-and-review-comments` to `nil` switch to only fetching the PR title summary and diff.
