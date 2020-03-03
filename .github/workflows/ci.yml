@@ -1,0 +1,11 @@
+name: CI
+
+on: [push]
+      
+jobs:
+  build:
+    runs-on: [ubuntu-latest]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run CI in docker
+      run: docker run -v $(pwd):/opt silex/emacs:master-dev  bash -c "cd /opt && make ci"
