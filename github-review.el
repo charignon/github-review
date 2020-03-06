@@ -3,7 +3,7 @@
 ;; Maintainer: Laurent Charignon <l.charignon@gmail.com>
 ;; Keywords: git, tools, vc, github
 ;; Homepage: https://github.com/charignon/github-review
-;; Package-Requires: ((emacs "25") (s "1.12.0") (ghub "2.0") (dash "2.11.0"))
+;; Package-Requires: ((emacs "25") (s "1.12.0") (ghub "2.0") (dash "2.11.0") (deferred "0.5.1"))
 ;; Package-Version: 0.1
 
 ;; This file is not part of GNU Emacs
@@ -37,6 +37,7 @@
 (require 'ghub)
 (require 's)
 (require 'dash)
+(require 'deferred)
 
 ;;;;;;;;;;;;;;;;;;;
 ;; Customization ;;
@@ -142,6 +143,18 @@ CALLBACK is called with the result"
 CALLBACK is called with the result"
   (github-review-get-pr pr-alist t callback))
 
+(defun github-review-get-pr-deferred (pr-alist needs-diff)
+  "Get a pull request or its diff.
+PR-ALIST is an alist representing a PR,
+NEEDS-DIFF t to return a diff nil to return the pr object
+return a deferred object"
+  (let ((d (deferred:new #'identity)))
+    (if needs-diff
+        (github-review-get-pr-diff pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d))
+        (github-review-get-pr-object pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)))
+      d))
+
+
 (defun github-review-post-review (pr-alist review callback)
   "Submit a code review.
 PR-ALIST is an alist representing a PR
@@ -188,41 +201,20 @@ CALLBACK will be called back when done"
             :errorback (lambda (&rest _) (message "Error talking to GitHub"))
             :callback callback))
 
-(defun github-review-chain-call (arg ctx cb)
-  "Run one function of a chain of functions.
-See `github-review-chain-calls' for more information.
-ARG is passed as the first argument of every callback in the chain.
-CB is called if the chain is done.
-CTX is propagated between calls in the chain.
-See github-review-chain-api-calls for more information"
-  (let ((chain (github-review-a-get ctx 'chain)))
-  (if (eq nil chain)
-    (funcall cb ctx) ;; Last function in the chain
-    (let* ((nextnode (car chain))
-           (fn (github-review-a-get nextnode 'function))
-           (fncallback (github-review-a-get nextnode 'callback))
-           (key (github-review-a-get nextnode 'key))
-           (newctx (github-review-a-assoc ctx 'chain (cdr chain))))
-      (funcall fn arg
-               (lambda (v &rest _)
-                 (github-review-chain-call
-                  arg
-                 (if key
-                     (github-review-a-assoc newctx key v)
-                     (funcall fncallback v newctx))
-                 cb)))))))
+(defun github-review-get-reviews-deferred (pr-alist)
+  "Get the code reviews on a PR.
+PR-ALIST is an alist representing a PR
+returns a deferred object"
+  (let ((d (deferred:new #'identity)))
+    (github-review-get-reviews pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)) d))
 
-(defun github-review-chain-calls (arg cb chain)
-  "Run a chain of functions.
-CHAIN is a list of ALIST containing 'function and ('callback or 'key)
-callback are called with ARG and a CTX (alist) in that order.
-KEY can be used instead of callback if the result should be stored in key.
-The result of the call to the callback should be the new CTX.
-ARG is the first argument that every function in the chain will be taking
-CB is the final callback to call with the resulting aggregate object
-
-For an example of how to use it, look at the tests"
-  (github-review-chain-call arg `((chain . ,chain)) cb))
+(defun github-review-get-issue-comments-deferred (pr-alist)
+  "Get the top level comments on a PR.
+PR-ALIST is an alist representing a PR
+CALLBACK will be called back when done
+return a deferred object"
+  (let ((d (deferred:new #'identity)))
+    (github-review-get-issue-comments pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)) d))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Code review file parsing ;;
@@ -484,48 +476,39 @@ See ‘github-review-start’ for more information"
 ;; User facing API ;;
 ;;;;;;;;;;;;;;;;;;;;;
 
-(defun github-review-chain ()
-  "Return alist representing sequence of operations to get a PR's information.
-Gets the PR diff, object, top level comments, and code reviews."
-  ;; Get the diff
-  `(((function . github-review-get-pr-diff)
-     (key . diff))
-
-    ;; ... the PR object
-    ((function . github-review-get-pr-object)
-     (callback . (lambda (v ctx &rest _)
-                   (let* ((comms (github-review-a-get v 'comments))
-                          (review_comments (github-review-a-get v 'review_comments))
-                          (chain (github-review-a-get v 'chain)))
-                     ;; And top level comments if there is any
-                     (when (and github-review-fetch-top-level-and-review-comments
-                                (> comms 0))
-                       (setq chain (cons `((function . github-review-get-issue-comments)
-                                           (key . top-level-comments))
-                                         chain)))
-                     ;; And code review if there is any
-                     (when (and github-review-fetch-top-level-and-review-comments
-                                (> review_comments 0))
-                       (setq chain (cons `((function . github-review-get-reviews)
-                                           (key . reviews))
-                                         chain)))
-                     (-> ctx
-                         (github-review-a-assoc 'object v)
-                         (github-review-a-assoc 'chain chain))))))))
-
-
 (defun github-review-start-internal (pr-alist)
   "Start review given PR URL given PR-ALIST."
-    (github-review-chain-calls
-     pr-alist
-     ;; Callback when done
-     (lambda (ctx)
-       (github-review-save-diff
-        pr-alist
-        (github-review-format-diff ctx)))
+  (deferred:$
+    (deferred:parallel
+      ;; Get the diff
+      (lambda () (github-review-get-pr-deferred pr-alist t))
+      ;; And the PR object
+      (lambda () (github-review-get-pr-deferred pr-alist nil))
+      (when github-review-fetch-top-level-and-review-comments
+        ;; And the top level comments
+        (lambda () (github-review-get-issue-comments-deferred pr-alist)))
+      (when github-review-fetch-top-level-and-review-comments
+        ;; And the previous reviews
+        (lambda () (github-review-get-reviews-deferred pr-alist))))
+    (deferred:nextc it
+      (lambda (x)
+        (let* ((diff (-> x (elt 0)))
+              (pr-object (-> x (elt 1)))
+              (comms (github-review-a-get pr-object 'comments))
+              (review_comments (github-review-a-get pr-object 'review_comments))
+              (issues-comments (when (and (> comms 0) github-review-fetch-top-level-and-review-comments) (-> x (elt 2))))
+              (reviews (when (and (> review_comments 0) github-review-fetch-top-level-and-review-comments) github-review-fetch-top-level-and-review-comments (-> x (elt 3)))))
+           (github-review-save-diff
+            pr-alist
+            (github-review-format-diff (-> (github-review-a-empty)
+                       (github-review-a-assoc 'diff diff)
+                       (github-review-a-assoc 'object pr-object)
+                       (github-review-a-assoc 'top-level-comments issues-comments)
+                       (github-review-a-assoc 'reviews reviews)))))))
+    (deferred:error it
+    (lambda (err)
+      (message "Got an error from the GitHub API!")))))
 
-     (github-review-chain)
-     ))
 
 ;;;###autoload
 (defun github-review-forge-pr-at-point ()
@@ -571,5 +554,4 @@ Gets the PR diff, object, top level comments, and code reviews."
   (github-review-submit-review "COMMENT"))
 
 (provide 'github-review)
-
 ;;; github-review.el ends here
