@@ -507,7 +507,7 @@ See ‘github-review-start’ for more information"
                                           (github-review-a-assoc 'reviews reviews)))))))
     (deferred:error it
       (lambda (err)
-        (message "Got an error from the GitHub API!")))))
+        (message "Got an error from the GitHub API %s!" err)))))
 
 
 ;;;###autoload
