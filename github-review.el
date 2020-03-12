@@ -125,13 +125,13 @@ PR-ALIST is an alist representing a PR,
 NEEDS-DIFF t to return a diff nil to return the pr object
 CALLBACK to call back when done."
   (ghub-get (github-review-format-pr-url 'get-pr pr-alist)
-             nil
-             :unpaginate t
-             :headers (if needs-diff github-review-diffheader '())
-             :auth 'github-review
-             :host (github-review-api-host pr-alist)
-             :callback callback
-             :errorback (lambda (&rest _) (message "Error talking to GitHub"))))
+            nil
+            :unpaginate t
+            :headers (if needs-diff github-review-diffheader '())
+            :auth 'github-review
+            :host (github-review-api-host pr-alist)
+            :callback callback
+            :errorback (lambda (&rest _) (message "Error talking to GitHub"))))
 
 (defun github-review-get-pr-object (pr-alist callback)
   "Get a pr object given PR-ALIST an alist representing a PR.
@@ -151,8 +151,8 @@ return a deferred object"
   (let ((d (deferred:new #'identity)))
     (if needs-diff
         (github-review-get-pr-diff pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d))
-        (github-review-get-pr-object pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)))
-      d))
+      (github-review-get-pr-object pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)))
+    d))
 
 
 (defun github-review-post-review (pr-alist review callback)
@@ -309,7 +309,7 @@ ACC is an alist accumulating parsing state."
 
      ;; Start of file
      ((and top-level? (github-review-non-null-filename-hunk-line? l)
-      (github-review-a-assoc (github-review-a-assoc acc 'pos nil) 'path (github-review-file-path l))))
+           (github-review-a-assoc (github-review-a-assoc acc 'pos nil) 'path (github-review-file-path l))))
 
      ;; Global Comments
      ((and top-level? (github-review-comment? l))
@@ -449,28 +449,28 @@ See ‘github-review-start’ for more information"
                      (string= (github-review-a-get x 'body) ""))
                    (github-review-a-get ctx 'reviews)))
          (diff (-> ctx (github-review-a-get 'diff) (github-review-a-get 'message))))
-  (concat
-   (github-review-to-comments title)
-   "\n~"
-   "\n"
-   ;; Github PR body contains \n\r for new lines
-   (github-review-to-comments (s-replace "\r" "" body))
-   "\n"
-   (when top-level-comments
-     (concat (s-join
-              "\n"
-              (-map
-               #'github-review-to-comments
-               (-map #'github-review-format-top-level-comment top-level-comments)))
-             "\n"))
-   (when reviews
-     (concat (s-join
-              "\n"
-              (-map
-               #'github-review-to-comments
-               (-map #'github-review-format-review reviews)))
-             "\n"))
-   diff)))
+    (concat
+     (github-review-to-comments title)
+     "\n~"
+     "\n"
+     ;; Github PR body contains \n\r for new lines
+     (github-review-to-comments (s-replace "\r" "" body))
+     "\n"
+     (when top-level-comments
+       (concat (s-join
+                "\n"
+                (-map
+                 #'github-review-to-comments
+                 (-map #'github-review-format-top-level-comment top-level-comments)))
+               "\n"))
+     (when reviews
+       (concat (s-join
+                "\n"
+                (-map
+                 #'github-review-to-comments
+                 (-map #'github-review-format-review reviews)))
+               "\n"))
+     diff)))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; User facing API ;;
@@ -493,21 +493,21 @@ See ‘github-review-start’ for more information"
     (deferred:nextc it
       (lambda (x)
         (let* ((diff (-> x (elt 0)))
-              (pr-object (-> x (elt 1)))
-              (comms (github-review-a-get pr-object 'comments))
-              (review_comments (github-review-a-get pr-object 'review_comments))
-              (issues-comments (when (and (> comms 0) github-review-fetch-top-level-and-review-comments) (-> x (elt 2))))
-              (reviews (when (and (> review_comments 0) github-review-fetch-top-level-and-review-comments) github-review-fetch-top-level-and-review-comments (-> x (elt 3)))))
-           (github-review-save-diff
-            pr-alist
-            (github-review-format-diff (-> (github-review-a-empty)
-                       (github-review-a-assoc 'diff diff)
-                       (github-review-a-assoc 'object pr-object)
-                       (github-review-a-assoc 'top-level-comments issues-comments)
-                       (github-review-a-assoc 'reviews reviews)))))))
+               (pr-object (-> x (elt 1)))
+               (comms (github-review-a-get pr-object 'comments))
+               (review_comments (github-review-a-get pr-object 'review_comments))
+               (issues-comments (when (and (> comms 0) github-review-fetch-top-level-and-review-comments) (-> x (elt 2))))
+               (reviews (when (and (> review_comments 0) github-review-fetch-top-level-and-review-comments) github-review-fetch-top-level-and-review-comments (-> x (elt 3)))))
+          (github-review-save-diff
+           pr-alist
+           (github-review-format-diff (-> (github-review-a-empty)
+                                          (github-review-a-assoc 'diff diff)
+                                          (github-review-a-assoc 'object pr-object)
+                                          (github-review-a-assoc 'top-level-comments issues-comments)
+                                          (github-review-a-assoc 'reviews reviews)))))))
     (deferred:error it
-    (lambda (err)
-      (message "Got an error from the GitHub API!")))))
+      (lambda (err)
+        (message "Got an error from the GitHub API!")))))
 
 
 ;;;###autoload
@@ -525,7 +525,7 @@ See ‘github-review-start’ for more information"
                        (github-review-a-assoc 'repo  name)
                        (github-review-a-assoc 'apihost apihost)
                        (github-review-a-assoc 'num   number))))
-         (github-review-start-internal pr-alist)))
+    (github-review-start-internal pr-alist)))
 
 ;;;###autoload
 (defun github-review-start (url)
