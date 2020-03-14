@@ -273,49 +273,6 @@ index 58baa4b..eae7707 100644
       (it "can format a diff with top level comments and review"
         (expect (github-review-format-diff context-with-tl-comments)
                 :to-equal expected-review-tl-comment))))
-
-  (describe "callback logic"
-
-    (describe "github-review-chain-calls"
-      (it "can execute a chain of one function"
-        (let ((res 8))
-          (github-review-chain-calls
-           ;; No argument
-           nil
-
-           ;; Final callback set res to the content of the 'foo key
-           (lambda (ctx)
-             (setq res (github-review-a-get ctx 'foo)))
-
-           ;; Function simulate an api call, takes arg and callback
-           ;; and populate the 'foo key with the result
-           '(((function . (lambda (arg cb) (funcall cb 3)))
-              (key . foo))))
-          (expect res :to-equal 3)))
-      (it "can execute a chain of two functions"
-        (let ((res 8))
-          (github-review-chain-calls
-           ;; No argument
-           nil
-
-           ;; Final callback set res to the content of the 'foo key
-           (lambda (ctx)
-             (setq res (github-review-a-get ctx 'foo)))
-
-           '(
-             ;; Function simulate an api call, takes arg and callback
-             ;; and populate the 'foo key with the result
-             ((function . (lambda (arg cb) (funcall cb 3)))
-              (key . foo))
-             ;; Function increment the content of the key foo
-             ((function . (lambda (arg cb) (funcall cb 42)))
-              (callback . (lambda (arg ctx)
-                            (github-review-a-assoc ctx
-                                                   'foo
-                                                   (+ 1
-                                                      (github-review-a-get ctx 'foo))))))))
-          (expect res :to-equal 4)))))
-
   (describe "entrypoints"
     (describe "github-review-start"
       :var (github-review-save-diff
@@ -355,7 +312,7 @@ index 58baa4b..eae7707 100644
                              (review_comments . 0)
                              (title . "title\nin\nthree\nlines"))))))
         (it "can render a diff"
-          (github-review-start "https://github.com/charignon/github-review/pull/6")
+          (deferred:sync! (github-review-start "https://github.com/charignon/github-review/pull/6"))
           (expect diff :to-equal simple-context-expected-review)))
 
       (describe "with top level comments"
@@ -369,7 +326,7 @@ index 58baa4b..eae7707 100644
                              (title . "title\nin\nthree\nlines"))))))
         (it "can render a diff"
           (let ((github-review-fetch-top-level-and-review-comments t))
-            (github-review-start "https://github.com/charignon/github-review/pull/6")
+            (deferred:sync! (github-review-start "https://github.com/charignon/github-review/pull/6"))
             (expect diff :to-equal expected-review-tl-comment))))
 
       (describe "with review that has no top level comment"
@@ -389,7 +346,7 @@ index 58baa4b..eae7707 100644
                              (title . "title\nin\nthree\nlines"))))))
         (it "does not show it"
           (let ((github-review-fetch-top-level-and-review-comments t))
-            (github-review-start "https://github.com/charignon/github-review/pull/6")
+            (deferred:sync! (github-review-start "https://github.com/charignon/github-review/pull/6"))
             (expect diff :to-equal simple-context-expected-review)))))))
 
 (describe "Api host computation"
