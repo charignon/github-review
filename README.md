@@ -109,3 +109,14 @@ If you use GitHub Enterprise, you can use the `github-review-host` custom variab
 configure the endpoint of your GitHub Enterprise installation.
 
 By default, `github-review` fetches all comments in a pull request. You can set `github-review-fetch-top-level-and-review-comments` to `nil` switch to only fetching the PR title summary and diff.
+
+## Code structure
+
+In yellow: internal functions
+
+In green: entrypoints
+
+
+![Architecture](./github-review.png)
+
+Source for the diagram is in github-review.draw.io
