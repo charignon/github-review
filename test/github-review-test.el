@@ -240,8 +240,9 @@ index 58baa4b..eae7707 100644
       (it "can parse fname and infer pr name"
         (expect
          (a-equal
-          (github-review-pr-from-fname "/tmp/charignon___testgheapi___2.diff")
-          '((num . "2")
+          (github-review-pr-from-fname "/tmp/charignon___testgheapi___2___60b73b28cc8b1b97ae5474b799219388952b9fc7.diff")
+          '((sha . "60b73b28cc8b1b97ae5474b799219388952b9fc7")
+            (num . "2")
             (repo . "testgheapi")
             (owner . "charignon"))))))
 
