@@ -68,6 +68,9 @@
 ;; Only repo scope needed to read PRs and submit reviews
 (defvar github-review-github-token-scopes '(repo))
 
+(defvar github-review-mode-hook nil
+  "Mode hook for `github-review-mode'.")
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;  Alist utilities to treat associative lists as immutable data structures  ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -482,7 +485,8 @@ ACC is an alist accumulating parsing state."
                      (github-review-a-get pr-alist 'num)))
   (erase-buffer)
   (insert diff)
-  (save-buffer))
+  (save-buffer)
+  (github-review-mode))
 
 (defun github-review-save-commit-diff (commit-alist diff)
   "Save a DIFF (string) to a temp file named after commit specified by COMMIT-ALIST."
@@ -736,6 +740,14 @@ return a deferred object"
   "Comment on a PR (to be run from a buffer corresponding to a review)."
   (interactive)
   (github-review-submit-review "COMMENT"))
+
+;;;###autoload
+(define-derived-mode github-review-mode
+  diff-mode "Code Review"
+  "Major mode for code review"
+  (setq mode-name "Code Review")
+  (setq major-mode 'github-review-mode)
+  (run-mode-hooks 'github-review-mode-hook))
 
 (provide 'github-review)
 ;;; github-review.el ends here
