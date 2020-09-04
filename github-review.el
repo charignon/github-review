@@ -122,6 +122,10 @@ PR-ALIST is an alist represenging the PR"
   "Return the api host for a PR-ALIST."
   (or (github-review-a-get pr-alist 'apihost) github-review-host))
 
+(defun github-review-errback (&rest m)
+  "Error callback, displays the error message M."
+  (message "Error talking to GitHub: %s" m))
+
 (defun github-review-get-pr (pr-alist needs-diff callback)
   "Get a pull request or its diff.
 PR-ALIST is an alist representing a PR,
@@ -134,7 +138,7 @@ CALLBACK to call back when done."
             :auth 'github-review
             :host (github-review-api-host pr-alist)
             :callback callback
-            :errorback (lambda (&rest _) (message "Error talking to GitHub"))))
+            :errorback #'github-review-errback))
 
 (defun github-review-get-pr-object (pr-alist callback)
   "Get a pr object given PR-ALIST an alist representing a PR.
@@ -168,7 +172,7 @@ CALLBACK will be called back when done"
              :auth 'github-review
              :payload review
              :host (github-review-api-host pr-alist)
-             :errorback (lambda (&rest _) (message "Error talking to GitHub"))
+             :errorback #'github-review-errback
              :callback callback))
 
 (defun github-review-get-inline-comments (pr-alist callback)
@@ -179,7 +183,7 @@ CALLBACK will be called back when done"
             nil
             :auth 'github-review
             :host (github-review-api-host pr-alist)
-            :errorback (lambda (&rest _) (message "Error talking to GitHub"))
+            :errorback #'github-review-errback
             :callback callback))
 
 (defun github-review-get-reviews (pr-alist callback)
@@ -190,7 +194,7 @@ CALLBACK will be called back when done"
             nil
             :auth 'github-review
             :host (github-review-api-host pr-alist)
-            :errorback (lambda (&rest _) (message "Error talking to GitHub"))
+            :errorback #'github-review-errback
             :callback callback))
 
 (defun github-review-get-issue-comments (pr-alist callback)
@@ -201,7 +205,7 @@ CALLBACK will be called back when done"
             nil
             :auth 'github-review
             :host (github-review-api-host pr-alist)
-            :errorback (lambda (&rest _) (message "Error talking to GitHub"))
+            :errorback #'github-review-errback
             :callback callback))
 
 (defun github-review-get-reviews-deferred (pr-alist)
