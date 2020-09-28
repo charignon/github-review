@@ -62,6 +62,11 @@
   :group 'github-review
   :type 'boolean)
 
+(defcustom github-review-save-commit-id-in-buffer t
+  "If t, the retrieved diff buffer will contain the diff's and its base's sha."
+  :group 'github-review
+  :type 'boolean)
+
 (defconst github-review-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
   "Header for requesting diffs from GitHub.")
 
@@ -99,6 +104,9 @@
   "Return an empty alist."
   '())
 
+(defun github-review-is-pr (id-alist)
+  (not (null (github-review-a-get id-alist 'num))))
+
 (defconst github-review-url-scheme
   '((get-pr . "/repos/%s/%s/pulls/%s")
     (get-commit . "/repos/%s/%s/commits/%s")
@@ -109,176 +117,119 @@
     (submit-commit-comments . "/repos/%s/%s/commits/%s/comments")
     (submit-review . "/repos/%s/%s/pulls/%s/reviews")))
 
-(defun github-review-format-pr-url (kind pr-alist)
-  "Format a url for accessing the pr.
+(defun github-review-format-url (kind id-alist)
+  "Format a url for accessing either a pr or commit.
 KIND is the kind of information to request.
-PR-ALIST is an alist represenging the PR"
+ID-ALIST is an alist represenging the object"
   (format (github-review-a-get github-review-url-scheme kind)
-          (github-review-a-get pr-alist 'owner )
-          (github-review-a-get pr-alist 'repo )
-          (github-review-a-get pr-alist 'num )))
-
-(defun github-review-format-commit-url (kind commit-alist)
-  "Format a url for accessing the commit.
-KIND is the kind of information to request.
-COMMIT-ALIST is an alist representing the COMMIT"
-  (format (github-review-a-get github-review-url-scheme kind)
-          (github-review-a-get commit-alist 'owner )
-          (github-review-a-get commit-alist 'repo )
-          (github-review-a-get commit-alist 'sha)))
+          (github-review-a-get id-alist 'owner )
+          (github-review-a-get id-alist 'repo )
+          (github-review-a-get id-alist (if (github-review-is-pr id-alist) 'num 'sha))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Communication with GitHub ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-(defun github-review-api-host (pr-alist)
-  "Return the api host for a PR-ALIST."
-  (or (github-review-a-get pr-alist 'apihost) github-review-host))
+(defun github-review-api-host (id-alist)
+  "Return the api host for a ID-ALIST."
+  (or (github-review-a-get id-alist 'apihost) github-review-host))
 
-(defun github-review-get-pr (pr-alist needs-diff callback)
-  "Get a pull request or its diff.
-PR-ALIST is an alist representing a PR,
-NEEDS-DIFF t to return a diff nil to return the pr object
+(defun github-review-get (id-alist needs-diff callback)
+  "Get a pull request or a commit or one's diff.
+ID-ALIST is an alist representing the PR or COMMIT,
+NEEDS-DIFF t to return a diff nil to return the requested object,
 CALLBACK to call back when done."
-  (ghub-get (github-review-format-pr-url 'get-pr pr-alist)
+  (ghub-get (github-review-format-url
+	     (if (github-review-is-pr id-alist) 'get-pr 'get-commit) id-alist)
             nil
             :unpaginate t
             :headers (if needs-diff github-review-diffheader '())
             :auth 'github-review
-            :host (github-review-api-host pr-alist)
+            :host (github-review-api-host id-alist)
             :callback callback
             :errorback (lambda (&rest _) (message "Error talking to GitHub"))))
 
-(defun github-review-get-commit (commit-alist needs-diff callback)
+(defun github-review-get-object (id-alist callback)
+  "Get a pr object given ID-ALIST an alist representing a PR or COMMIT,
+CALLBACK is called with the result"
+  (github-review-get id-alist nil callback))
+
+(defun github-review-get-diff (id-alist callback)
+  "Get the diff for a pr, given ID-ALIST an alist representing a PR or COMMIT,
+CALLBACK is called with the result"
+  (github-review-get id-alist t callback))
+
+(defun github-review-get-deferred (id-alist needs-diff)
   "Get a pull request or its diff.
-COMMIT-ALIST is an alist representing a COMMIT,
-NEEDS-DIFF t to return a diff nil to return the commit object
-CALLBACK to call back when done."
-  (ghub-get (github-review-format-commit-url 'get-commit commit-alist)
-            nil
-            :unpaginate t
-            :headers (if needs-diff github-review-diffheader '())
-            :auth 'github-review
-            :host (github-review-api-host commit-alist)
-            :callback callback
-            :errorback (lambda (&rest _) (message "Error talking to GitHub"))))
-
-
-(defun github-review-get-commit-object (commit-alist callback)
-  "Get a commit object given COMMIT-ALIST an alist recommitesenting a COMMIT.
-CALLBACK is called with the result"
-  (github-review-get-commit commit-alist nil callback))
-
-(defun github-review-get-commit-diff (commit-alist callback)
-  "Get the diff for a commit, given COMMIT-ALIST an alist recommitesenting a COMMIT.
-CALLBACK is called with the result"
-  (github-review-get-commit commit-alist t callback))
-
-
-(defun github-review-get-pr-object (pr-alist callback)
-  "Get a pr object given PR-ALIST an alist representing a PR.
-CALLBACK is called with the result"
-  (github-review-get-pr pr-alist nil callback))
-
-(defun github-review-get-pr-diff (pr-alist callback)
-  "Get the diff for a pr, given PR-ALIST an alist representing a PR.
-CALLBACK is called with the result"
-  (github-review-get-pr pr-alist t callback))
-
-(defun github-review-get-pr-deferred (pr-alist needs-diff)
-  "Get a pull request or its diff.
-PR-ALIST is an alist representing a PR,
-NEEDS-DIFF t to return a diff nil to return the pr object
+ID-ALIST is an alist representing a PR or COMMIT,
+NEEDS-DIFF t to return a diff nil to return the pr object,
 return a deferred object"
   (let ((d (deferred:new #'identity)))
     (if needs-diff
-        (github-review-get-pr-diff pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d))
-      (github-review-get-pr-object pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)))
+        (github-review-get-diff id-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d))
+      (github-review-get-object id-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)))
     d))
 
-(defun github-review-get-commit-deferred (commit-alist needs-diff)
-  "Get a commit or its diff.
-COMMIT-ALIST is an alist representing a commit
-NEEDS-DIFF t to return a diff nil to return the pr object
-return a deferred object"
-  (let ((d (deferred:new #'identity)))
-    (if needs-diff
-        (github-review-get-commit-diff commit-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d))
-      (github-review-get-commit-object commit-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)))
-    d))
-
-(defun github-review-post-review-commit (commit-alist review callback)
+(defun github-review-post-review (id-alist review callback)
   "Submit a code review.
-COMMIT-ALIST is an alist representing a commit
-REVIEW is the review alist
+ID-ALIST is an alist representing a PR or COMMIT,
+REVIEW is the review alist,
 CALLBACK will be called back when done"
-  (ghub-post (github-review-format-commit-url 'submit-commit-comments commit-alist)
+  (ghub-post (github-review-format-url
+	      (if (github-review-is-pr id-alist) 'submit-review 'submit-commit-comments) id-alist)
              nil
              :auth 'github-review
              :payload review
-             :host (github-review-api-host commit-alist)
+             :host (github-review-api-host id-alist)
              :errorback (lambda (&rest _) (message "Error talking to GitHub"))
              :callback callback))
 
-(defun github-review-post-review (pr-alist review callback)
-  "Submit a code review.
-PR-ALIST is an alist representing a PR
-REVIEW is the review alist
-CALLBACK will be called back when done"
-  (ghub-post (github-review-format-pr-url 'submit-review pr-alist)
-             nil
-             :auth 'github-review
-             :payload review
-             :host (github-review-api-host pr-alist)
-             :errorback (lambda (&rest _) (message "Error talking to GitHub"))
-             :callback callback))
-
-(defun github-review-get-inline-comments (pr-alist callback)
+(defun github-review-get-inline-comments (id-alist callback)
   "Get the inline comments on a pr.
-PR-ALIST is an alist representing a PR
+ID-ALIST is an alist representing a PR or COMMIT,
 CALLBACK will be called back when done"
-  (ghub-get (github-review-format-pr-url 'get-inline-comments pr-alist)
+  (ghub-get (github-review-format-url 'get-inline-comments id-alist)
             nil
             :auth 'github-review
-            :host (github-review-api-host pr-alist)
+            :host (github-review-api-host id-alist)
             :errorback (lambda (&rest _) (message "Error talking to GitHub"))
             :callback callback))
 
-(defun github-review-get-reviews (pr-alist callback)
+(defun github-review-get-reviews (id-alist callback)
   "Get the code reviews on a PR.
-PR-ALIST is an alist representing a PR
+ID-ALIST is an alist representing a PR or COMMIT,
 CALLBACK will be called back when done"
-  (ghub-get (github-review-format-pr-url 'get-review-comments pr-alist)
+  (ghub-get (github-review-format-url 'get-review-comments id-alist)
             nil
             :auth 'github-review
-            :host (github-review-api-host pr-alist)
+            :host (github-review-api-host id-alist)
             :errorback (lambda (&rest _) (message "Error talking to GitHub"))
             :callback callback))
 
-(defun github-review-get-issue-comments (pr-alist callback)
+(defun github-review-get-issue-comments (id-alist callback)
   "Get the top level comments on a PR.
-PR-ALIST is an alist representing a PR
+ID-ALIST is an alist representing a PR or COMMIT,
 CALLBACK will be called back when done"
-  (ghub-get (github-review-format-pr-url 'get-issue-comments pr-alist)
+  (ghub-get (github-review-format-url 'get-issue-comments id-alist)
             nil
             :auth 'github-review
-            :host (github-review-api-host pr-alist)
+            :host (github-review-api-host id-alist)
             :errorback (lambda (&rest _) (message "Error talking to GitHub"))
             :callback callback))
 
-(defun github-review-get-reviews-deferred (pr-alist)
+(defun github-review-get-reviews-deferred (id-alist)
   "Get the code reviews on a PR.
-PR-ALIST is an alist representing a PR
+ID-ALIST is an alist representing a PR or COMMIT,
 returns a deferred object"
   (let ((d (deferred:new #'identity)))
-    (github-review-get-reviews pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)) d))
+    (github-review-get-reviews id-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)) d))
 
-(defun github-review-get-issue-comments-deferred (pr-alist)
+(defun github-review-get-issue-comments-deferred (id-alist)
   "Get the top level comments on a PR.
-PR-ALIST is an alist representing a PR
+ID-ALIST is an alist representing a PR or COMMIT,
 CALLBACK will be called back when done
 return a deferred object"
   (let ((d (deferred:new #'identity)))
-    (github-review-get-issue-comments pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)) d))
+    (github-review-get-issue-comments id-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)) d))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Code review file parsing ;;
@@ -476,29 +427,37 @@ ACC is an alist accumulating parsing state."
                                    (github-review-a-assoc 'sha (match-string 3 url)))))
            commit-alist))))
 
-(defun github-review-save-diff (pr-alist diff)
-  "Save a DIFF (string) to a temp file named after pr specified by PR-ALIST."
-  (find-file (format "%s/%s___%s___%s.diff"
-                     github-review-review-folder
-                     (github-review-a-get pr-alist 'owner)
-                     (github-review-a-get pr-alist 'repo)
-                     (github-review-a-get pr-alist 'num)))
-  (erase-buffer)
-  (insert diff)
-  (save-buffer)
-  (github-review-mode))
-
-(defun github-review-save-commit-diff (commit-alist diff)
-  "Save a DIFF (string) to a temp file named after commit specified by COMMIT-ALIST."
-  (find-file (format "%s/%s___%s___commit___%s.diff"
-                     github-review-review-folder
-                     (github-review-a-get commit-alist 'owner)
-                     (github-review-a-get commit-alist 'repo)
-                     (github-review-a-get commit-alist 'sha)))
-  (erase-buffer)
-  (insert diff)
-  (save-buffer))
-
+(defun github-review-save-diff (id-alist diff ids)
+  "Save a DIFF (string) to a temp file named after pr or commit sha specified by ID-ALIST.
+IDS stands for alist of the diff and its parent's sha:s, when supplied the two becomes
+buffer-local variables"
+  (let* ((is-pr (github-review-is-pr id-alist))
+	 (buffer-read-only))
+    (find-file (format (if is-pr "%s/%s___%s___%s.diff" "%s/%s___%s___commit___%s.diff")
+                       github-review-review-folder
+                       (github-review-a-get id-alist 'owner)
+                       (github-review-a-get id-alist 'repo)
+                       (github-review-a-get id-alist (if is-pr 'num 'sha))))
+    (setq buffer-read-only nil)
+    (erase-buffer)
+    (insert diff)
+    (when github-review-save-commit-id-in-buffer
+      (when (not (null ids))
+	(set-variable 'gh-commit-id       (first  ids) t)
+	(set-variable 'gh-first-parent-id (second ids) t)
+	(insert
+	 (concat "\n\n"
+      		 ";;; Local Variables:\n"
+		 ";;; gh-commit-id: "    gh-commit-id       "\n"
+		 ";;; gh-first-parent: " gh-first-parent-id "\n"
+		 ";;; End:\n"))))
+    (save-buffer)
+    ;; Fixme: would it make sense to run the new mode
+    ;;        as an user-customizable option, a sort of a hook.
+    ;;        At this point some might prefer a plain (diff-mode). Others
+    ;;        check out the parent commit, start building etc.
+    ;;        Sure, that could be done through (add-hook 'github-review-mode-hook ... :-))
+    (github-review-mode)))
 
 (defun github-review-parsed-review-from-current-buffer ()
   "Return a code review given the current buffer containing a diff."
@@ -511,18 +470,22 @@ ACC is an alist accumulating parsing state."
 ;;;;;;;;;;;;;
 
 
-(defun github-review-submit-review-commit (kind)
+(defun github-review-submit-review-commit ()
   "Submit a code review of KIND.
 This function infers the PR name based on the current filename"
   (let* ((commit-alist (github-review-commit-from-fname (buffer-file-name)))
          (parsed-review (github-review-parsed-review-from-current-buffer)))
     (message "Submitting review, this may take a while ...")
-    (let* ((sha (github-review-a-get commit-alist 'sha))
+    (let* ((parsed-body (github-review-a-get parsed-review 'body))
            (comments (github-review-a-get parsed-review 'comments)))
-      (cl-loop for x in comments collect (github-review-post-review-commit
+      (when (and parsed-body (not (string-empty-p parsed-body)))
+	(github-review-post-review commit-alist `((body . ,parsed-body))
+				   (lambda (&rest _)
+                                     (message "Done submitting commit top-level comments"))))
+      (cl-loop for x in comments collect (github-review-post-review
                                           commit-alist
                                           x (lambda (&rest _)
-                                              (message "Done submitting review")))))))
+                                              (message "Done submitting commit diff comments")))))))
 
 
 
@@ -530,21 +493,21 @@ This function infers the PR name based on the current filename"
   "Submit a code review of KIND.
 This function infers the PR name based on the current filename"
   (if (s-contains? "___commit___" (buffer-file-name))
-      (github-review-submit-review-commit kind)
-    (let* ((pr-alist (github-review-pr-from-fname (buffer-file-name)))
+      (github-review-submit-review-commit)
+    (let* ((id-alist (github-review-pr-from-fname (buffer-file-name)))
            (parsed-review (github-review-parsed-review-from-current-buffer)))
       (message "Submitting review, this may take a while ...")
-      (github-review-get-pr-object
-       pr-alist
+      (github-review-get-object
+       id-alist
        (lambda (v &rest _)
          (let* ((head-sha (github-review-a-get (github-review-a-get v 'head) 'sha))
                 (review   (-> parsed-review
                               (github-review-a-assoc 'commit_id head-sha)
                               (github-review-a-assoc 'event kind))))
            (github-review-post-review
-            pr-alist
+            id-alist
             review (lambda (&rest _)
-                     (message "Done submitting review")))))))))
+                     (message "Done submitting review %S" review)))))))))
 
 (defun github-review-to-comments (text)
   "Convert TEXT, a string to a string where each line is prefixed by ~."
@@ -612,9 +575,9 @@ See ‘github-review-start’ for more information"
   (deferred:$
     (deferred:parallel
       ;; Get the diff
-      (lambda () (github-review-get-pr-deferred pr-alist t))
+      (lambda () (github-review-get-deferred pr-alist t))
       ;; And the PR object
-      (lambda () (github-review-get-pr-deferred pr-alist nil))
+      (lambda () (github-review-get-deferred pr-alist nil))
       (when github-review-fetch-top-level-and-review-comments
         ;; And the top level comments
         (lambda () (github-review-get-issue-comments-deferred pr-alist)))
@@ -626,6 +589,8 @@ See ‘github-review-start’ for more information"
         (let* ((diff (-> x (elt 0)))
                (pr-object (-> x (elt 1)))
                (comms (github-review-a-get pr-object 'comments))
+	       (commit-id (github-review-a-get (github-review-a-get pr-object 'head) 'sha))
+	       (parent-id (github-review-a-get (github-review-a-get pr-object 'base) 'sha))
                (review_comments (github-review-a-get pr-object 'review_comments))
                (issues-comments (when (and (> comms 0) github-review-fetch-top-level-and-review-comments) (-> x (elt 2))))
                (reviews (when (and (> review_comments 0) github-review-fetch-top-level-and-review-comments) github-review-fetch-top-level-and-review-comments (-> x (elt 3)))))
@@ -635,7 +600,8 @@ See ‘github-review-start’ for more information"
                                           (github-review-a-assoc 'diff diff)
                                           (github-review-a-assoc 'object pr-object)
                                           (github-review-a-assoc 'top-level-comments issues-comments)
-                                          (github-review-a-assoc 'reviews reviews)))))))
+                                          (github-review-a-assoc 'reviews reviews)))
+	   (list commit-id parent-id)))))
     (deferred:error it
       (lambda (err)
         (message "Got an error from the GitHub API %s!" err)))))
@@ -671,9 +637,9 @@ See ‘github-review-start’ for more information"
   (deferred:$
     (deferred:parallel
       ;; Get the diff
-      (lambda () (github-review-get-commit-deferred commit-alist t))
+      (lambda () (github-review-get-deferred commit-alist t))
       ;; And the PR object
-      (lambda () (github-review-get-commit-deferred commit-alist nil))
+      (lambda () (github-review-get-deferred commit-alist nil))
       (when github-review-fetch-top-level-and-review-comments
         ;; And the top level comments
         (lambda () (github-review-get-commit-comments-deferred commit-alist))))
@@ -681,22 +647,25 @@ See ‘github-review-start’ for more information"
       (lambda (x)
         (let* ((diff (-> x (elt 0)))
                (commit-object (-> x (elt 1)))
-	       (issues-comments (when (and t github-review-fetch-top-level-and-review-comments) (-> x (elt 2)))))
-          (github-review-save-commit-diff
+	       (issues-comments (when (and t github-review-fetch-top-level-and-review-comments) (-> x (elt 2))))
+	       (commit-id (alist-get 'sha commit-object))
+	       (parent-id (alist-get 'sha (first (alist-get 'parents commit-object)))))
+          (github-review-save-diff
            commit-alist
            (github-review-format-diff (-> (github-review-a-empty)
                                           (github-review-a-assoc 'diff diff)
                                           (github-review-a-assoc 'object commit-object)
-					  (github-review-a-assoc 'top-level-comments issues-comments)))))))
+					  (github-review-a-assoc 'top-level-comments issues-comments)))
+	   (list commit-id parent-id)))))
     (deferred:error it
       (lambda (err)
         (message "Got an error from the GitHub API %s!" err)))))
 
 (defun github-review-get-commit-comments (commit-alist callback)
-  "Get the top level comments on a PR.
-COMMIT-ALIST is an alist representing a PR
+  "Get the top level comments on a COMMIT.
+COMMIT-ALIST is an alist representing a COMMIT,
 CALLBACK will be called back when done"
-  (ghub-get (github-review-format-commit-url 'get-commit-comments commit-alist)
+  (ghub-get (github-review-format-url 'get-commit-comments commit-alist)
             nil
             :auth 'github-review
             :host (github-review-api-host commit-alist)
@@ -704,9 +673,9 @@ CALLBACK will be called back when done"
             :callback callback))
 
 (defun github-review-get-commit-comments-deferred (commit-alist)
-  "Get the top level comments on a PR.
-COMMIT-ALIST is an alist representing a PR
-CALLBACK will be called back when done
+  "Get the top level comments on a COMMIT.
+COMMIT-ALIST is an alist representing a COMMIT,
+CALLBACK will be called back when done,
 return a deferred object"
   (let ((d (deferred:new #'identity)))
     (github-review-get-commit-comments commit-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)) d))
@@ -721,7 +690,8 @@ return a deferred object"
         ((github-review-is-pr-commit-url? url) (let* ((commit-alist (github-review-pr-commit-from-url url)))
                                              (github-review-commit-start-internal commit-alist)))
         (t (let* ((pr-alist (github-review-pr-from-url url)))
-                (github-review-start-internal pr-alist)))))
+             (github-review-start-internal pr-alist))))
+  (message "current buffer %s" (buffer-name)))
 
 ;;;###autoload
 (defun github-review-approve ()
