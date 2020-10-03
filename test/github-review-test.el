@@ -1,4 +1,5 @@
 (load-file "./test/test-helper.el")
+(require 'a)
 (require 'github-review)
 (require 'buttercup)
 
@@ -237,17 +238,21 @@ index 58baa4b..eae7707 100644
 
     (describe "github-review-pr-from-fname"
       (it "can parse fname and infer pr name"
-        (expect (github-review-pr-from-fname "/tmp/charignon___testgheapi___2.diff") :to-equal
-                '((num . "2")
-                  (repo . "testgheapi")
-                  (owner . "charignon")))))
+        (expect
+         (a-equal
+          (github-review-pr-from-fname "/tmp/charignon___testgheapi___2.diff")
+          '((num . "2")
+            (repo . "testgheapi")
+            (owner . "charignon"))))))
 
     (describe "github-review-pr-from-url"
       (it "can parse url and infer pr details"
-        (expect (github-review-pr-from-url "https://github.com/charignon/testgheapi/pull/2") :to-equal
-                '((num . "2")
-                  (repo . "testgheapi")
-                  (owner . "charignon"))))))
+        (expect
+         (a-equal
+          (github-review-pr-from-url "https://github.com/charignon/testgheapi/pull/2")
+          '((num . "2")
+            (repo . "testgheapi")
+            (owner . "charignon")))))))
 
   (describe "diff formatting"
 
@@ -338,12 +343,12 @@ index 58baa4b..eae7707 100644
                             (state . "APPROVED")
                             (body . "")))))
            (symbol-function 'github-review-get-pr-object)
-                (lambda (_ cb)
-                  (funcall cb
-                           '((body . "body\npart")
-                             (comments . 0)
-                             (review_comments . 1)
-                             (title . "title\nin\nthree\nlines"))))))
+           (lambda (_ cb)
+             (funcall cb
+                      '((body . "body\npart")
+                        (comments . 0)
+                        (review_comments . 1)
+                        (title . "title\nin\nthree\nlines"))))))
         (it "does not show it"
           (let ((github-review-fetch-top-level-and-review-comments t))
             (deferred:sync! (github-review-start "https://github.com/charignon/github-review/pull/6"))
@@ -351,9 +356,9 @@ index 58baa4b..eae7707 100644
 
 (describe "Api host computation"
   (it "defaults to api.github.com"
-    (expect (github-review-api-host (github-review-a-empty)) :to-equal "api.github.com"))
+    (expect (github-review-api-host '()) :to-equal "api.github.com"))
   (it "can be overriden"
-    (expect (github-review-api-host (-> (github-review-a-empty) (github-review-a-assoc 'apihost "api.github.biz"))) :to-equal "api.github.biz")))
+    (expect (github-review-api-host (a-alist 'apihost "api.github.biz")) :to-equal "api.github.biz")))
 
 (provide 'github-review-test)
 
