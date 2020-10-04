@@ -12,4 +12,4 @@ test:
 # 1) Follow steps to install cask https://github.com/cask/cask
 # 2) Call `cask` to install all the dependencies
 local:
-	TRAVIS=true ${HOME}/.cask/bin/cask exec buttercup -L test/github-review-test.el # TRAVIS=true to force coverage to be computed locally
+	docker run -v $$(pwd):/opt silex/emacs:master-dev  bash -c 'cd /opt && make ci'
