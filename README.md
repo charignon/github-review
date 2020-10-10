@@ -71,7 +71,7 @@ Once done, you can submit your review with one of `github-review-approve`, `gith
 
 ## Usage with Forge
 
-You can use `github-review` with `forge`(https://github.com/magit/forge).
+You can use `github-review` with [`forge`](https://github.com/magit/forge).
 When your cursor is over a pull request, you can call `github-review-forge-pr-at-point` to start a code
 review.
 
@@ -101,7 +101,7 @@ If you just want to install `github-review` separately, add the following to you
 `github-review` needs a GitHub token to act on your behalf for fetching PRs and
 submitting reviews.
 
-Create a personal access token using GitHub (https://github.com/settings/tokens) and add a line to your auth source files with your login and token:
+[Create a personal access token using GitHub](https://github.com/settings/tokens) and add a line to your auth source files with your login and token:
 
 ```
 machine api.github.com login yourlogin^github-review password MYTOKENGOESHERE
