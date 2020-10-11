@@ -463,7 +463,7 @@ See ‘github-review-start’ for more information"
                                                'reviews reviews))))))
     (deferred:error it
       (lambda (err)
-        (message "Got an error from the GitHub API %s!" err)))))
+        (message "Got an error from the GitHub API %S!" err)))))
 
 
 ;;;###autoload
