@@ -5,16 +5,20 @@
 
 (describe "github-review"
   :var (ghub-get
-        ghub-post)
+        ghub-post
+        ghub-graphql)
   (before-each
     (setf
      ;; Prevent the tests from hitting the network
      (symbol-function 'ghub-get)
      (lambda (&rest _)
-       (error "Cannot make network call in tests"))
+       (error "Cannot make network call in tests -> ghub-get"))
      (symbol-function 'ghub-post)
      (lambda (&rest _)
-       (error "Cannot make network call in tests"))))
+       (error "Cannot make network call in tests -> ghub-post"))
+     (symbol-function 'ghub-graphql)
+     (lambda (&rest _)
+       (error "Cannot make network call in tests -> ghub-graphql"))))
 
   (defconst expected-review-tl-comment "~ title
 ~ in
@@ -36,6 +40,17 @@ c")
 ~
 ~ body
 ~ part
+a
+b
+c")
+  (defconst simple-context-expected-review-with-review "~ title
+~ in
+~ three
+~ lines
+~
+~ body
+~ part
+~ Reviewed by @babar[APPROVED]: LGTM
 a
 b
 c")
@@ -219,20 +234,20 @@ index 58baa4b..eae7707 100644
     (describe "github-review-parse-review-lines"
       (it "can parse a complex code review"
         (let* ((actual (github-review-parse-review-lines (split-string examplediff "\n"))))
-          (expect actual :to-equal complex-review-expected)))
+          (expect (a-equal actual complex-review-expected))))
       (it "can parse a code review with no comment"
         (let* ((actual (github-review-parse-review-lines (split-string example-no-comment "\n")))
                (expected '((body . "This is a global comment at the top of the file\nwith multiple\nlines"))))
-          (expect actual :to-equal expected)))
+          (expect (a-equal actual expected))))
       (it "can parse a code review with deleted files"
         (let* ((actual (github-review-parse-review-lines (split-string example-review-deleted-file "\n"))))
-          (expect actual :to-equal expected-review-deleted-file)))
+          (expect (a-equal actual expected-review-deleted-file))))
       (it "can parse a code review with a removed comment in haskell"
         (let* ((actual (github-review-parse-review-lines (split-string example-review-deleted-comment-haskell "\n"))))
-          (expect actual :to-equal expected-review-deleted-comment-haskell)))
+          (expect (a-equal actual expected-review-deleted-comment-haskell))))
       (it "can parse a code review with previous comments but ignores it"
         (let* ((actual (github-review-parse-review-lines (split-string example-previous-comments "\n"))))
-          (expect actual :to-equal complex-review-expected-no-comment-on-zeroth-and-first-line)))))
+          (expect (a-equal actual complex-review-expected-no-comment-on-zeroth-and-first-line))))))
 
   (describe "PR name inference from review filename and url"
 
@@ -257,79 +272,103 @@ index 58baa4b..eae7707 100644
 
   (describe "diff formatting"
 
-    (defconst simple-context
-      `((object . ((title . "title\nin\nthree\nlines")
-                   (body . "body\npart")))
-        (diff . ((message . "a\nb\nc")))))
+    (defconst simple-diff
+      (a-alist 'message "a\nb\nc"))
 
-    (defconst context-with-tl-comments
-      `((object . ((title . "title\nin\nthree\nlines")
-                   (body . "body\npart")))
-        (top-level-comments ((user . ((login . "foo")))
-                             (body . "a comment")))
-        (reviews ((user . ((login . "babar")))
-                  (state . "APPROVED")
-                  (body . "LGTM")))
-        (diff . ((message . "a\nb\nc")))))
+    (defconst simple-pr
+      (a-alist 'title  "title\nin\nthree\nlines"
+               'bodyText "body\npart"))
+
+    (defconst pr-with-tl-comments
+      (a-alist 'title  "title\nin\nthree\nlines"
+               'bodyText "body\npart"
+               'comments (a-alist
+                          'nodes
+                          (list (a-alist
+                                 'author (a-alist 'login "foo")
+                                 'bodyText "a comment")))
+               'reviews (a-alist
+                          'nodes
+                          (list (a-alist
+                                 'author (a-alist 'login "babar")
+                                 'bodyText "LGTM"
+                                 'state "APPROVED")))))
 
     (describe "github-review-format-diff"
       (it "can format a simple diff"
-        (expect (github-review-format-diff simple-context)
-                :to-equal simple-context-expected-review))
+        (expect (a-equal (github-review-format-diff simple-diff simple-pr)simple-context-expected-review)))
       (it "can format a diff with top level comments and review"
-        (expect (github-review-format-diff context-with-tl-comments)
-                :to-equal expected-review-tl-comment))))
+        (expect (a-equal (github-review-format-diff simple-diff pr-with-tl-comments)  expected-review-tl-comment)))))
   (describe "entrypoints"
     (describe "github-review-start"
       :var (github-review-save-diff
-            github-review-get-pr-obj
-            github-review-get-pr-diff
+            github-review-get-diff
+            github-review-get-pr-info
             diff)
 
       (before-each
-        (setf
          ;; Mock all the I/O for the test
+         (setf
          (symbol-function 'github-review-save-diff)
          (lambda (_ value)
            (setq diff value))
 
-         (symbol-function 'github-review-get-pr-diff)
+         (symbol-function 'github-review-get-diff)
          (lambda (_ cb)
-           (funcall cb `((message . "a\nb\nc"))))
-
-         (symbol-function 'github-review-get-issue-comments)
-         (lambda (_ cb)
-           (funcall cb `(((user . ((login . "foo")))
-                          (body . "a comment")))))
-
-         (symbol-function 'github-review-get-reviews)
-         (lambda (_ cb)
-           (funcall cb `(((user . ((login . "babar")))
-                          (state . "APPROVED")
-                          (body . "LGTM")))))))
+           (funcall cb `((message . "a\nb\nc"))))))
 
       (describe "no top level comments are present"
         (before-each
-          (setf (symbol-function 'github-review-get-pr-object)
+          (setf (symbol-function 'github-review-get-pr-info)
                 (lambda (_ cb)
                   (funcall cb
-                           '((body . "body\npart")
-                             (comments . 0)
-                             (review_comments . 0)
-                             (title . "title\nin\nthree\nlines"))))))
+                           (a-alist
+                            'data (a-alist
+                                   'repository
+                                   (a-alist
+                                    'pullRequest
+                                    (a-alist
+                                     'title  "title\nin\nthree\nlines"
+                                     'bodyText "body\npart"
+                                     'headRef (a-alist
+                                               'target
+                                               (a-alist
+                                                'oid
+                                                "examplesha"))))))))))
+
         (it "can render a diff"
           (deferred:sync! (github-review-start "https://github.com/charignon/github-review/pull/6"))
           (expect diff :to-equal simple-context-expected-review)))
 
       (describe "with top level comments"
         (before-each
-          (setf (symbol-function 'github-review-get-pr-object)
+          (setf (symbol-function 'github-review-get-pr-info)
                 (lambda (_ cb)
                   (funcall cb
-                           '((body . "body\npart")
-                             (comments . 1)
-                             (review_comments . 1)
-                             (title . "title\nin\nthree\nlines"))))))
+                           (a-alist
+                            'data (a-alist
+                                   'repository
+                                   (a-alist
+                                    'pullRequest
+                                    (a-alist
+                                     'title  "title\nin\nthree\nlines"
+                                     'bodyText "body\npart"
+                                     'comments (a-alist
+                                                'nodes
+                                                (list (a-alist
+                                                       'author (a-alist 'login "foo")
+                                                       'bodyText "a comment")))
+                                     'reviews (a-alist
+                                               'nodes
+                                               (list (a-alist
+                                                      'author (a-alist 'login "babar")
+                                                      'bodyText "LGTM"
+                                                      'state "APPROVED")))
+                                     'headRef (a-alist
+                                               'target
+                                               (a-alist
+                                                'oid
+                                                "examplesha"))))))))))
         (it "can render a diff"
           (let ((github-review-fetch-top-level-and-review-comments t))
             (deferred:sync! (github-review-start "https://github.com/charignon/github-review/pull/6"))
@@ -337,23 +376,31 @@ index 58baa4b..eae7707 100644
 
       (describe "with review that has no top level comment"
         (before-each
-          (setf
-           (symbol-function 'github-review-get-reviews)
-           (lambda (_ cb)
-             (funcall cb `(((user . ((login . "babar")))
-                            (state . "APPROVED")
-                            (body . "")))))
-           (symbol-function 'github-review-get-pr-object)
-           (lambda (_ cb)
-             (funcall cb
-                      '((body . "body\npart")
-                        (comments . 0)
-                        (review_comments . 1)
-                        (title . "title\nin\nthree\nlines"))))))
+          (setf (symbol-function 'github-review-get-pr-info)
+                (lambda (_ cb)
+                  (funcall cb
+                           (a-alist
+                            'data (a-alist
+                                   'repository
+                                   (a-alist
+                                    'pullRequest
+                                    (a-alist
+                                     'title  "title\nin\nthree\nlines"
+                                     'bodyText "body\npart"
+                                     'reviews (a-alist
+                                               'nodes
+                                               (list (a-alist
+                                                      'author (a-alist 'login "babar")
+                                                      'bodyText "LGTM"
+                                                      'state "APPROVED")))
+                                     'headRef (a-alist
+                                               'target
+                                               (a-alist
+                                                'oid
+                                                "examplesha"))))))))))
         (it "does not show it"
-          (let ((github-review-fetch-top-level-and-review-comments t))
-            (deferred:sync! (github-review-start "https://github.com/charignon/github-review/pull/6"))
-            (expect diff :to-equal simple-context-expected-review)))))))
+          (deferred:sync! (github-review-start "https://github.com/charignon/github-review/pull/6"))
+          (expect diff :to-equal simple-context-expected-review-with-review))))))
 
 (describe "Api host computation"
   (it "defaults to api.github.com"
