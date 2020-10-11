@@ -340,8 +340,9 @@ ACC is an alist accumulating parsing state."
   "Extract a pr alist from BUFFER-FNAME."
   (let ((fname (car (last (s-split "/" buffer-fname)))))
     (save-match-data
-      (and (string-match "\\(.*\\)___\\(.*\\)___\\([0-9]+\\)\.diff" fname)
-           (a-alist 'num   (match-string 3 fname)
+      (and (string-match "\\(.*\\)___\\(.*\\)___\\([0-9]+\\)___\\(.*\\)\.diff" fname)
+           (a-alist 'sha   (match-string 4 fname)
+                    'num   (match-string 3 fname)
                     'repo  (match-string 2 fname)
                     'owner (match-string 1 fname))))))
 
@@ -357,7 +358,7 @@ ACC is an alist accumulating parsing state."
 (defun github-review-save-diff (pr-alist diff)
   "Save a DIFF (string) to a temp file named after pr specified by PR-ALIST."
   (let-alist pr-alist
-    (find-file (format "%s/%s___%s___%s.diff" github-review-review-folder .owner .repo .num))
+    (find-file (format "%s/%s___%s___%s___%s.diff" github-review-review-folder .owner .repo .num .sha))
     (erase-buffer)
     (insert diff)
     (save-buffer)
@@ -376,18 +377,15 @@ ACC is an alist accumulating parsing state."
 (defun github-review-submit-review (kind)
   "Submit a code review of KIND.
 This function infers the PR name based on the current filename"
+  (message "Submitting review, this may take a while ...")
   (let* ((pr-alist (github-review-pr-from-fname (buffer-file-name)))
-         (parsed-review (github-review-parsed-review-from-current-buffer)))
-    (message "Submitting review, this may take a while ...")
-    (github-review-get-pr-object
+         (parsed-review (github-review-parsed-review-from-current-buffer))
+         (head-sha (a-get pr-alist 'sha))
+         (review (a-assoc parsed-review 'commit_id head-sha 'event kind)))
+    (github-review-post-review
      pr-alist
-     (lambda (v &rest _)
-       (let* ((head-sha (a-get-in v '(head sha)))
-              (review (a-assoc parsed-review 'commit_id head-sha 'event kind)))
-         (github-review-post-review
-          pr-alist
-          review (lambda (&rest _)
-                   (message "Done submitting review"))))))))
+     review (lambda (&rest _)
+              (message "Done submitting review")))))
 
 (defun github-review-to-comments (text)
   "Convert TEXT, a string to a string where each line is prefixed by ~."
@@ -458,7 +456,7 @@ See ‘github-review-start’ for more information"
                (issues-comments (when (and (> comms 0) github-review-fetch-top-level-and-review-comments) (-third-item x)))
                (reviews (when (and (> review_comments 0) github-review-fetch-top-level-and-review-comments) github-review-fetch-top-level-and-review-comments (-fourth-item x))))
           (github-review-save-diff
-           pr-alist
+           (a-assoc pr-alist 'sha (a-get-in pr-object '(head sha)))
            (github-review-format-diff (a-alist 'diff diff
                                                'object pr-object
                                                'top-level-comments issues-comments
