@@ -471,23 +471,17 @@ See ‘github-review-start’ for more information"
   "Review the forge pull request at point."
   (interactive)
   (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
-         (repo    (forge-get-repository pullreq))
-         (owner   (oref repo owner))
-         (name    (oref repo name))
-         (apihost (oref repo apihost))
-         (number  (oref pullreq number)))
-    (github-review-start-internal (a-alist 'owner   owner
-                                           'repo    name
-                                           'apihost apihost
-                                           'num     number))))
+         (repo    (forge-get-repository pullreq)))
+    (github-review-start-internal (a-alist 'owner   (oref repo owner)
+                                           'repo    (oref repo name)
+                                           'apihost (oref repo apihost)
+                                           'num     (oref pullreq number)))))
 
 ;;;###autoload
 (defun github-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
-  (let* ((pr-alist (github-review-pr-from-url url)))
-    (github-review-start-internal pr-alist)))
-
+  (github-review-start-internal (github-review-pr-from-url url)))
 
 ;;;###autoload
 (defun github-review-approve ()
