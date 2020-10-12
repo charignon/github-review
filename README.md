@@ -112,19 +112,6 @@ machine api.github.com login yourlogin^github-review password MYTOKENGOESHERE
 If you use GitHub Enterprise, you can use the `github-review-host` custom variable to
 configure the endpoint of your GitHub Enterprise installation.
 
-By default, `github-review` fetches all comments in a pull request. You can set `github-review-fetch-top-level-and-review-comments` to `nil` switch to only fetching the PR title summary and diff.
-
-## Code structure
-
-In yellow: internal functions
-
-In green: entrypoints
-
-
-![Architecture](./github-review.png)
-
-Source for the diagram is in github-review.draw.io
-
 ## Notice
 
 *I am providing code in the repository to you under an open source license. Because this is my personal repository, the license you receive to my
