@@ -38,6 +38,7 @@
 (require 'dash)
 (require 'deferred)
 (require 'ghub)
+(require 'ghub-graphql)
 (require 's)
 
 ;;;;;;;;;;;;;;;;;;;
@@ -58,11 +59,6 @@
   :group 'github-review
   :type 'string)
 
-(defcustom github-review-fetch-top-level-and-review-comments t
-  "If t, fetch the top level and review comments."
-  :group 'github-review
-  :type 'boolean)
-
 (defconst github-review-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
   "Header for requesting diffs from GitHub.")
 
@@ -71,24 +67,6 @@
 
 (defvar github-review-mode-hook nil
   "Mode hook for `github-review-mode'.")
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;  Alist utilities to treat associative lists as immutable data structures  ;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defconst github-review-url-scheme
-  (a-alist 'get-pr "/repos/%s/%s/pulls/%s"
-           'get-inline-comments "/repos/%s/%s/pulls/%s/comments"
-           'get-review-comments "/repos/%s/%s/pulls/%s/reviews"
-           'get-issue-comments "/repos/%s/%s/issues/%s/comments"
-           'submit-review "/repos/%s/%s/pulls/%s/reviews"))
-
-(defun github-review-format-pr-url (kind pr-alist)
-  "Format a url for accessing the pr.
-KIND is the kind of information to request.
-PR-ALIST is an alist represenging the PR"
-  (let-alist pr-alist
-    (format (a-get github-review-url-scheme kind) .owner .repo .num)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Communication with GitHub ;;
@@ -101,102 +79,74 @@ PR-ALIST is an alist represenging the PR"
   "Error callback, displays the error message M."
   (message "Error talking to GitHub: %s" m))
 
-(defun github-review-get-pr (pr-alist needs-diff callback)
+(defun github-review-get-diff (pr-alist callback)
   "Get a pull request or its diff.
 PR-ALIST is an alist representing a PR,
 NEEDS-DIFF t to return a diff nil to return the pr object
 CALLBACK to call back when done."
-  (ghub-get (github-review-format-pr-url 'get-pr pr-alist)
-            nil
-            :unpaginate t
-            :headers (if needs-diff github-review-diffheader '())
-            :auth 'github-review
-            :host (github-review-api-host pr-alist)
-            :callback callback
-            :errorback #'github-review-errback))
+  (let-alist pr-alist
+    (ghub-get (format "/repos/%s/%s/pulls/%s" .owner .repo .num)
+              nil
+              :unpaginate t
+              :headers github-review-diffheader
+              :auth 'github-review
+              :host (github-review-api-host pr-alist)
+              :callback callback
+              :errorback #'github-review-errback)))
 
-(defun github-review-get-pr-object (pr-alist callback)
-  "Get a pr object given PR-ALIST an alist representing a PR.
-CALLBACK is called with the result"
-  (github-review-get-pr pr-alist nil callback))
-
-(defun github-review-get-pr-diff (pr-alist callback)
-  "Get the diff for a pr, given PR-ALIST an alist representing a PR.
-CALLBACK is called with the result"
-  (github-review-get-pr pr-alist t callback))
-
-(defun github-review-get-pr-deferred (pr-alist needs-diff)
+(defun github-review-get-diff-deferred (pr-alist)
   "Get a pull request or its diff.
 PR-ALIST is an alist representing a PR,
 NEEDS-DIFF t to return a diff nil to return the pr object
 return a deferred object"
   (let ((d (deferred:new #'identity)))
-    (if needs-diff
-        (github-review-get-pr-diff pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d))
-      (github-review-get-pr-object pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)))
+    (github-review-get-diff pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d))
     d))
 
+(defun github-review-get-pr-info (pr-alist callback)
+  (let-alist pr-alist
+    (let ((query (format "query {
+  repository(name: \"%s\", owner: \"%s\") {
+    pullRequest(number: %s){
+      headRef { target{ oid } }
+      title
+      bodyText
+      comments(first:50) {
+        nodes { author { login } bodyText }
+      }
+      reviews(first: 50) {
+        nodes { author { login } bodyText state }
+      } }
+  }
+}" .repo .owner .num)))
+      (ghub-graphql query
+                    '()
+                    :auth 'github-review
+                    :host (github-review-api-host pr-alist)
+                    :errorback #'github-review-errback
+                    :callback callback))))
+
+(defun github-review-get-pr-info-deferred (pr-alist)
+  "Get the code reviews on a PR.
+PR-ALIST is an alist representing a PR
+returns a deferred object"
+  (let ((d (deferred:new #'identity)))
+    (github-review-get-pr-info pr-alist (apply-partially (lambda (d v &rest _)
+                                                           (deferred:callback-post d v)) d)) d))
 
 (defun github-review-post-review (pr-alist review callback)
   "Submit a code review.
 PR-ALIST is an alist representing a PR
 REVIEW is the review alist
 CALLBACK will be called back when done"
-  (ghub-post (github-review-format-pr-url 'submit-review pr-alist)
-             nil
-             :auth 'github-review
-             :payload review
-             :host (github-review-api-host pr-alist)
-             :errorback #'github-review-errback
-             :callback callback))
-
-(defun github-review-get-inline-comments (pr-alist callback)
-  "Get the inline comments on a pr.
-PR-ALIST is an alist representing a PR
-CALLBACK will be called back when done"
-  (ghub-get (github-review-format-pr-url 'get-inline-comments pr-alist)
-            nil
-            :auth 'github-review
-            :host (github-review-api-host pr-alist)
-            :errorback #'github-review-errback
-            :callback callback))
-
-(defun github-review-get-reviews (pr-alist callback)
-  "Get the code reviews on a PR.
-PR-ALIST is an alist representing a PR
-CALLBACK will be called back when done"
-  (ghub-get (github-review-format-pr-url 'get-review-comments pr-alist)
-            nil
-            :auth 'github-review
-            :host (github-review-api-host pr-alist)
-            :errorback #'github-review-errback
-            :callback callback))
-
-(defun github-review-get-issue-comments (pr-alist callback)
-  "Get the top level comments on a PR.
-PR-ALIST is an alist representing a PR
-CALLBACK will be called back when done"
-  (ghub-get (github-review-format-pr-url 'get-issue-comments pr-alist)
-            nil
-            :auth 'github-review
-            :host (github-review-api-host pr-alist)
-            :errorback #'github-review-errback
-            :callback callback))
-
-(defun github-review-get-reviews-deferred (pr-alist)
-  "Get the code reviews on a PR.
-PR-ALIST is an alist representing a PR
-returns a deferred object"
-  (let ((d (deferred:new #'identity)))
-    (github-review-get-reviews pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)) d))
-
-(defun github-review-get-issue-comments-deferred (pr-alist)
-  "Get the top level comments on a PR.
-PR-ALIST is an alist representing a PR
-CALLBACK will be called back when done
-return a deferred object"
-  (let ((d (deferred:new #'identity)))
-    (github-review-get-issue-comments pr-alist (apply-partially (lambda (d v &rest _)  (deferred:callback-post d v)) d)) d))
+  (let-alist pr-alist
+    (ghub-post (format "/repos/%s/%s/pulls/%s/reviews" .owner .repo .num)
+               nil
+               :auth 'github-review
+               :payload review
+               :host (github-review-api-host pr-alist)
+               :errorback #'github-review-errback
+               :callback callback)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Code review file parsing ;;
@@ -262,14 +212,6 @@ COMMENTS on the same file, same pos are coallesced"
     (cons (a-get acc-reduced 'lastcomment)
           (a-get acc-reduced 'merged))))
 
-(defun github-review-normalize-comment (c)
-  "Normalize the order of entries in the alist C, representing a comment.
-needed to avoid writing convoluted tests"
-  (let-alist c
-    `((position . ,.position)
-      (body . ,.body)
-      (path . ,.path))))
-
 (defun github-review-parse-line (acc l)
   "Reducer function to parse lines in a code review.
 Analyzes one line in a diff return an alist with two entries: body and comments
@@ -325,13 +267,11 @@ ACC is an alist accumulating parsing state."
          (parsed-data (-reduce-from #'github-review-parse-line acc lines))
          (parsed-comments (a-get parsed-data 'comments))
          (parsed-body (s-trim-right (a-get parsed-data 'body)))
-         (merged-comments (if (equal nil parsed-comments)
-                              nil
-                            (github-review-merge-comments (reverse parsed-comments)))))
+         (merged-comments (when parsed-comments (github-review-merge-comments (reverse parsed-comments)))))
     (if (equal nil merged-comments)
         `((body . ,parsed-body))
       `((body . ,parsed-body)
-        (comments . ,(reverse (-map #'github-review-normalize-comment merged-comments)))))))
+        (comments . ,(reverse merged-comments))))))
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Buffer interactions ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -394,76 +334,59 @@ This function infers the PR name based on the current filename"
 (defun github-review-format-top-level-comment (com)
   "Format a top level COM objectto string."
   (let-alist com
-    (format "@%s: %s" .user.login .body)))
+    (format "@%s: %s" .author.login .bodyText)))
 
 (defun github-review-format-review (review)
   "Format a REVIEW object to string."
   (let-alist review
-    (format "Reviewed by @%s[%s]: %s" .user.login .state .body)))
+    (format "Reviewed by @%s[%s]: %s" .author.login .state .bodyText)))
 
-(defun github-review-format-diff (ctx)
-  "Formats a diff to save it for review.
-CTX is the result of a callback chain to get information about a PR.
-See ‘github-review-start’ for more information"
-  (let-alist ctx
+(defun github-review-format-diff (gitdiff pr)
+  "Formats a GITDIFF and PR to save it for review."
+  (let-alist pr
     (concat
-     (github-review-to-comments .object.title)
+     (github-review-to-comments .title)
      "\n~"
      "\n"
      ;; Github PR body contains \n\r for new lines
-     (github-review-to-comments (s-replace "\r" "" .object.body))
+     (github-review-to-comments (s-replace "\r" "" .bodyText))
      "\n"
-     (when .top-level-comments
+     (when .comments
        (concat (s-join
                 "\n"
                 (-map
                  #'github-review-to-comments
-                 (-map #'github-review-format-top-level-comment .top-level-comments)))
+                 (-map #'github-review-format-top-level-comment .comments.nodes)))
                "\n"))
-     (when-let ((reviews (-reject (lambda (x) (string= (a-get x 'body) "")) .reviews)))
+     (when-let ((reviews (-reject (lambda (x) (string= (a-get x 'body) "")) .reviews.nodes)))
        (concat (s-join
                 "\n"
                 (-map
                  #'github-review-to-comments
                  (-map #'github-review-format-review reviews)))
                "\n"))
-     .diff.message)))
+     (a-get gitdiff 'message))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; User facing API ;;
 ;;;;;;;;;;;;;;;;;;;;;
 
+
 (defun github-review-start-internal (pr-alist)
   "Start review given PR URL given PR-ALIST."
   (deferred:$
     (deferred:parallel
-      ;; Get the diff
-      (lambda () (github-review-get-pr-deferred pr-alist t))
-      ;; And the PR object
-      (lambda () (github-review-get-pr-deferred pr-alist nil))
-      (when github-review-fetch-top-level-and-review-comments
-        ;; And the top level comments
-        (lambda () (github-review-get-issue-comments-deferred pr-alist)))
-      (when github-review-fetch-top-level-and-review-comments
-        ;; And the previous reviews
-        (lambda () (github-review-get-reviews-deferred pr-alist))))
+      (lambda () (github-review-get-diff-deferred pr-alist))
+      (lambda () (github-review-get-pr-info-deferred pr-alist)))
     (deferred:nextc it
       (lambda (x)
-        (let* ((diff (-first-item x))
-               (pr-object (-second-item x))
-               (comms (a-get pr-object 'comments))
-               (review_comments (a-get pr-object 'review_comments))
-               (issues-comments (when (and (> comms 0) github-review-fetch-top-level-and-review-comments) (-third-item x)))
-               (reviews (when (and (> review_comments 0) github-review-fetch-top-level-and-review-comments) github-review-fetch-top-level-and-review-comments (-fourth-item x))))
+        (let-alist (-second-item x)
           (github-review-save-diff
-           (a-assoc pr-alist 'sha (a-get-in pr-object '(head sha)))
-           (github-review-format-diff (a-alist 'diff diff
-                                               'object pr-object
-                                               'top-level-comments issues-comments
-                                               'reviews reviews))))))
+           (a-assoc pr-alist 'sha .data.repository.pullRequest.headRef.target.oid)
+           (github-review-format-diff (-first-item x) .data.repository.pullRequest)))))
     (deferred:error it
       (lambda (err)
-        (message "Got an error from the GitHub API %s!" err)))))
+        (message "Got an error from the GitHub API %S!" err)))))
 
 
 ;;;###autoload
@@ -471,23 +394,17 @@ See ‘github-review-start’ for more information"
   "Review the forge pull request at point."
   (interactive)
   (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
-         (repo    (forge-get-repository pullreq))
-         (owner   (oref repo owner))
-         (name    (oref repo name))
-         (apihost (oref repo apihost))
-         (number  (oref pullreq number)))
-    (github-review-start-internal (a-alist 'owner   owner
-                                           'repo    name
-                                           'apihost apihost
-                                           'num     number))))
+         (repo    (forge-get-repository pullreq)))
+    (github-review-start-internal (a-alist 'owner   (oref repo owner)
+                                           'repo    (oref repo name)
+                                           'apihost (oref repo apihost)
+                                           'num     (oref pullreq number)))))
 
 ;;;###autoload
 (defun github-review-start (url)
   "Start review given PR URL."
   (interactive "sPR URL: ")
-  (let* ((pr-alist (github-review-pr-from-url url)))
-    (github-review-start-internal pr-alist)))
-
+  (github-review-start-internal (github-review-pr-from-url url)))
 
 ;;;###autoload
 (defun github-review-approve ()
