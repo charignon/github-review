@@ -2,6 +2,8 @@
 
 # github-review: GitHub code reviews with Emacs.
 
+[![Hits](https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fgithub.com%2Fcharignon%2Fgithub-review&count_bg=%2379C83D&title_bg=%23555555&icon=&icon_color=%23E7E7E7&title=PAGE+VIEWS&edge_flat=false)](https://hits.seeyoufarm.com)
+
 This package contains a handful of Emacs commands to review GitHub pull request
 without leaving Emacs.
 
