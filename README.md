@@ -98,10 +98,17 @@ If you just want to install `github-review` separately, add the following to you
 
 ## Configuration
 
+### Github
+
 `github-review` needs a GitHub token to act on your behalf for fetching PRs and
 submitting reviews.
 
-[Create a personal access token using GitHub](https://github.com/settings/tokens) and add a line to your auth source files with your login and token:
+1. [Create a personal access token using GitHub](https://github.com/settings/tokens)
+2. Set the `repo` scope as the subscope of repo
+3. If using GitHub enterprise / for business you also need the `write:discussion` `read:discussion` scope.
+
+### Auth
+Add a line to your auth source files with your login and token:
 
 ```
 machine api.github.com login yourlogin^github-review password MYTOKENGOESHERE
