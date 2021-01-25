@@ -55,7 +55,8 @@
   :type 'string)
 
 (defcustom github-review-host "api.github.com"
-  "Host for the GitHub api."
+  "Host for the GitHub api if you use the hosted version of GitHub. 
+  This typically looks like: api.git.mycompany.com"
   :group 'github-review
   :type 'string)
 
