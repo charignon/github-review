@@ -110,7 +110,7 @@ machine api.github.com login yourlogin^github-review password MYTOKENGOESHERE
 ## Customization
 
 If you use GitHub Enterprise, you can use the `github-review-host` custom variable to
-configure the endpoint of your GitHub Enterprise installation.
+configure the endpoint of your GitHub Enterprise installation, this should look like `api.git.mycompany.com`.
 
 ## Notice
 
