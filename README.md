@@ -98,7 +98,7 @@ If you just want to install `github-review` separately, add the following to you
 
 ## Configuration
 
-### Github
+### GitHub
 
 `github-review` needs a GitHub token to act on your behalf for fetching PRs and
 submitting reviews.
