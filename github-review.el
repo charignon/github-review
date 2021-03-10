@@ -52,7 +52,7 @@
 (defcustom github-review-review-folder temporary-file-directory
   "Folder in which to store the code review files."
   :group 'github-review
-  :type 'string)
+  :type 'directory)
 
 (defcustom github-review-host "api.github.com"
   "Host for the GitHub api."
