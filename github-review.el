@@ -49,7 +49,7 @@
   "Write and submit GitHub code reviews from within Emacs."
   :group 'tools)
 
-(defcustom github-review-review-folder "/tmp"
+(defcustom github-review-review-folder temporary-file-directory
   "Folder in which to store the code review files."
   :group 'github-review
   :type 'string)
