@@ -116,7 +116,8 @@ return a deferred object"
         nodes { author { login } bodyText }
       }
       reviews(first: 50) {
-        nodes { author { login } bodyText state }
+        nodes { author { login } bodyText state
+          comments(first: 50) { nodes { bodyText diffHunk originalPosition } }}
       } }
   }
 }" .repo .owner .num)))
@@ -342,9 +343,59 @@ This function infers the PR name based on the current filename"
   (let-alist review
     (format "Reviewed by @%s[%s]: %s" .author.login .state .bodyText)))
 
+(setq github-review-comment-pos ())
+
+(defun github-review-place-review-comments (gitdiff review)
+  (if (not (a-get-in review (list 'comments 'nodes)))
+      gitdiff
+    (let* ((at (a-get-in review (list 'author 'login)))
+           (body (a-get review 'bodyText))
+           (body-lines (split-string body "\n"))
+           (state (a-get review 'state))
+
+           (diffs (split-string gitdiff "\n"))
+           (comments (a-get-in review (list 'comments 'nodes)))
+           (default-shift-pos 5)
+           (diffs-new
+            (-reduce-from
+             (lambda (acc-diff comment)
+               (let* ((original-pos (a-get comment 'originalPosition))
+                      (adjusted-pos (+ original-pos
+                                       default-shift-pos
+                                       (or (a-get github-review-comment-pos original-pos) 0)))
+                      (comment-lines (split-string (a-get comment 'bodyText) "\n"))
+                      (diff-splitted (-split-at adjusted-pos acc-diff)))
+
+                 (push (cons original-pos (+ (or (a-get github-review-comment-pos original-pos) 0)
+                                             (length comment-lines)
+                                             (length body-lines)))
+                       github-review-comment-pos)
+                 (-concat
+                  (-first-item diff-splitted)
+                  (list ""
+                        (format "~ Reviewed by @%s[%s]: %s" at state
+                                (if (string-empty-p body)
+                                    (-first-item comment-lines)
+                                  (-first-item body-lines))))
+                  (-map
+                   (lambda (commentLine) (s-concat "~ " (s-trim-left commentLine)))
+                   (-concat
+                    (-drop 1 body-lines)
+                    (if (string-empty-p body)
+                        (-drop 1 comment-lines)
+                      comment-lines)))
+                  (-second-item diff-splitted))))
+             diffs
+             comments)))
+      (s-join
+       "\n"
+       diffs-new))))
+
 (defun github-review-format-diff (gitdiff pr)
   "Formats a GITDIFF and PR to save it for review."
+  (message "AQUI sim")
   (let-alist pr
+    (setq github-review-comment-pos ())
     (concat
      (github-review-to-comments .title)
      "\n~"
@@ -359,14 +410,20 @@ This function infers the PR name based on the current filename"
                  #'github-review-to-comments
                  (-map #'github-review-format-top-level-comment .comments.nodes)))
                "\n"))
-     (when-let ((reviews (-reject (lambda (x) (string= (a-get x 'body) "")) .reviews.nodes)))
-       (concat (s-join
-                "\n"
-                (-map
-                 #'github-review-to-comments
-                 (-map #'github-review-format-review reviews)))
-               "\n"))
-     (a-get gitdiff 'message))))
+     (-reduce-from
+      (lambda (acc-gitdiff node)
+        (github-review-place-review-comments acc-gitdiff node))
+      (a-get gitdiff 'message)
+      .reviews.nodes)
+     ;; (when-let ((reviews (-reject (lambda (x) (string= (a-get x 'body) "")) .reviews.nodes)))
+     ;;   (concat (s-join
+     ;;            "\n"
+     ;;            (-map
+     ;;             #'github-review-to-comments
+     ;;             (-map #'github-review-format-review reviews)))
+     ;;           "\n"))
+     ;; (a-get gitdiff 'message)
+     )))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; User facing API ;;
@@ -382,6 +439,7 @@ This function infers the PR name based on the current filename"
     (deferred:nextc it
       (lambda (x)
         (let-alist (-second-item x)
+
           (github-review-save-diff
            (a-assoc pr-alist 'sha .data.repository.pullRequest.headRef.target.oid)
            (github-review-format-diff (-first-item x) .data.repository.pullRequest)))))
