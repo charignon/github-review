@@ -331,12 +331,12 @@ This function infers the PR name based on the current filename"
 
 (defun github-review-to-comments (text)
   "Convert TEXT, a string to a string where each line is prefixed by ~."
-  (s-join "\n" (-map (lambda (x) (concat "~ " x)) (s-split "\n" text))))
+  (s-join "\n" (-concat (list " ") (-map (lambda (x) (concat "~ " x)) (s-split "\n" text)))))
 
 (defun github-review-format-top-level-comment (com)
   "Format a top level COM objectto string."
   (let-alist com
-    (format "@%s: %s" .author.login .bodyText)))
+    (format "Commented by @%s: %s" .author.login .bodyText)))
 
 (defun github-review-format-review (review)
   "Format a REVIEW object to string."
