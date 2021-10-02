@@ -343,7 +343,7 @@ This function infers the PR name based on the current filename"
   (let-alist review
     (format "Reviewed by @%s[%s]: %s" .author.login .state .bodyText)))
 
-(setq github-review-comment-pos ())
+(setq github-review-comment-pos nil)
 
 (defun github-review-place-review-comments (gitdiff review)
   (if (not (a-get-in review (list 'comments 'nodes)))
@@ -362,14 +362,13 @@ This function infers the PR name based on the current filename"
                (let* ((original-pos (a-get comment 'originalPosition))
                       (adjusted-pos (+ original-pos
                                        default-shift-pos
-                                       (or (a-get github-review-comment-pos original-pos) 0)))
+                                       (or github-review-comment-pos 0)))
                       (comment-lines (split-string (a-get comment 'bodyText) "\n"))
                       (diff-splitted (-split-at adjusted-pos acc-diff)))
 
-                 (push (cons original-pos (+ (or (a-get github-review-comment-pos original-pos) 0)
-                                             (length comment-lines)
-                                             (length body-lines)))
-                       github-review-comment-pos)
+                 (setq github-review-comment-pos (+ (or github-review-comment-pos 0)
+                                                    (length comment-lines)
+                                                    (length body-lines)))
                  (-concat
                   (-first-item diff-splitted)
                   (list ""
@@ -393,9 +392,8 @@ This function infers the PR name based on the current filename"
 
 (defun github-review-format-diff (gitdiff pr)
   "Formats a GITDIFF and PR to save it for review."
-  (message "AQUI sim")
   (let-alist pr
-    (setq github-review-comment-pos ())
+    (setq github-review-comment-pos nil)
     (concat
      (github-review-to-comments .title)
      "\n~"
