@@ -350,7 +350,10 @@ This function infers the PR name based on the current filename"
         (format "Reviewed by @%s[%s]: %s" .author.login .state .bodyText)
       "")))
 
-(setq github-review-comment-pos nil)
+(defvar github-review-comment-pos nil
+  "Variable to count how many comments in code lines were added in the diff.
+This is necessary to adjust the new comments to the correct position in the diff given that
+Github API provides only the originalPosition in the query.")
 
 (defun github-review-place-review-comments (gitdiff review)
   (if (not (a-get-in review (list 'comments 'nodes)))
