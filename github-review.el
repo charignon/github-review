@@ -415,7 +415,6 @@ This function infers the PR name based on the current filename"
                  #'github-review-to-comments
                  (-map #'github-review-format-top-level-comment .comments.nodes)))
                "\n"))
-     "\n"
      (when-let ((reviews (-reject (lambda (x) (string= (a-get x 'body) "")) .reviews.nodes)))
        (concat (s-join
                 "\n"
