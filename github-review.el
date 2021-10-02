@@ -423,16 +423,7 @@ This function infers the PR name based on the current filename"
       (lambda (acc-gitdiff node)
         (github-review-place-review-comments acc-gitdiff node))
       (a-get gitdiff 'message)
-      .reviews.nodes)
-     ;; (when-let ((reviews (-reject (lambda (x) (string= (a-get x 'body) "")) .reviews.nodes)))
-     ;;   (concat (s-join
-     ;;            "\n"
-     ;;            (-map
-     ;;             #'github-review-to-comments
-     ;;             (-map #'github-review-format-review reviews)))
-     ;;           "\n"))
-     ;; (a-get gitdiff 'message)
-     )))
+      .reviews.nodes))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; User facing API ;;
