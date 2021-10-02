@@ -419,7 +419,6 @@ Github API provides only the originalPosition in the query.")
 (defun github-review-format-diff (gitdiff pr)
   "Formats a GITDIFF and PR to save it for review."
   (let-alist pr
-    (setq github-review-comment-pos nil)
     (concat
      (github-review-to-comments .title)
      "\n~"
@@ -442,11 +441,13 @@ Github API provides only the originalPosition in the query.")
                  (-map #'github-review-format-review reviews)))
                "\n"))
      (if github-review-view-comments-in-code-lines
-         (-reduce-from
-          (lambda (acc-gitdiff node)
-            (github-review-place-review-comments acc-gitdiff node))
-          (a-get gitdiff 'message)
-          .reviews.nodes)
+         (progn
+           (setq github-review-comment-pos nil)
+           (-reduce-from
+            (lambda (acc-gitdiff node)
+              (github-review-place-review-comments acc-gitdiff node))
+            (a-get gitdiff 'message)
+            .reviews.nodes))
        (a-get gitdiff 'message)))))
 
 ;;;;;;;;;;;;;;;;;;;;;
