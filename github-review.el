@@ -120,13 +120,29 @@ return a deferred object"
         nodes { author { login } bodyText }
       }
       reviews(first: 50) {
+        nodes { author { login } bodyText state }
+      } }
+  }
+}" .repo .owner .num))
+          (query-with-comments (format "query {
+  repository(name: \"%s\", owner: \"%s\") {
+    pullRequest(number: %s){
+      headRef { target{ oid } }
+      title
+      bodyText
+      comments(first:50) {
+        nodes { author { login } bodyText }
+      }
+      reviews(first: 50) {
         nodes { author { login } bodyText state
           comments(first: 50)
             { nodes { bodyText originalPosition } }}
       } }
   }
 }" .repo .owner .num)))
-      (ghub-graphql query
+      (ghub-graphql (if github-review-view-comments-in-code-lines
+                        query-with-comments
+                      query)
                     '()
                     :auth 'github-review
                     :host (github-review-api-host pr-alist)
