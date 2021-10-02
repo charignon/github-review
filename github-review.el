@@ -444,7 +444,6 @@ This function infers the PR name based on the current filename"
     (deferred:nextc it
       (lambda (x)
         (let-alist (-second-item x)
-
           (github-review-save-diff
            (a-assoc pr-alist 'sha .data.repository.pullRequest.headRef.target.oid)
            (github-review-format-diff (-first-item x) .data.repository.pullRequest)))))
