@@ -117,7 +117,8 @@ return a deferred object"
       }
       reviews(first: 50) {
         nodes { author { login } bodyText state
-          comments(first: 50) { nodes { bodyText diffHunk originalPosition } }}
+          comments(first: 50)
+            { nodes { bodyText originalPosition } }}
       } }
   }
 }" .repo .owner .num)))
