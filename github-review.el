@@ -60,6 +60,10 @@
   :group 'github-review
   :type 'string)
 
+(defcustom github-review-view-comments-in-code-lines nil
+  "Flag to enable displaying comments in code lines."
+  :group 'github-review)
+
 (defconst github-review-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
   "Header for requesting diffs from GitHub.")
 
@@ -419,12 +423,13 @@ This function infers the PR name based on the current filename"
                  #'github-review-to-comments
                  (-map #'github-review-format-review reviews)))
                "\n"))
-     "\n"
-     (-reduce-from
-      (lambda (acc-gitdiff node)
-        (github-review-place-review-comments acc-gitdiff node))
-      (a-get gitdiff 'message)
-      .reviews.nodes))))
+     (if github-review-view-comments-in-code-lines
+         (-reduce-from
+          (lambda (acc-gitdiff node)
+            (github-review-place-review-comments acc-gitdiff node))
+          (a-get gitdiff 'message)
+          .reviews.nodes)
+       (a-get gitdiff 'message)))))
 
 ;;;;;;;;;;;;;;;;;;;;;
 ;; User facing API ;;
