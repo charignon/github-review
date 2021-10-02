@@ -341,7 +341,9 @@ This function infers the PR name based on the current filename"
 (defun github-review-format-review (review)
   "Format a REVIEW object to string."
   (let-alist review
-    (format "Reviewed by @%s[%s]: %s" .author.login .state .bodyText)))
+    (if (not (string-empty-p .bodyText))
+        (format "Reviewed by @%s[%s]: %s" .author.login .state .bodyText)
+      "")))
 
 (setq github-review-comment-pos nil)
 
@@ -408,6 +410,15 @@ This function infers the PR name based on the current filename"
                  #'github-review-to-comments
                  (-map #'github-review-format-top-level-comment .comments.nodes)))
                "\n"))
+     "\n"
+     (when-let ((reviews (-reject (lambda (x) (string= (a-get x 'body) "")) .reviews.nodes)))
+       (concat (s-join
+                "\n"
+                (-map
+                 #'github-review-to-comments
+                 (-map #'github-review-format-review reviews)))
+               "\n"))
+     "\n"
      (-reduce-from
       (lambda (acc-gitdiff node)
         (github-review-place-review-comments acc-gitdiff node))
