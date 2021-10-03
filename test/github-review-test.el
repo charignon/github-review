@@ -129,6 +129,37 @@ index 9eced0230..4512bb335 100644
  type ClippedAccountName = AccountName
 ")
 
+    (defconst example-diff-before-comments-in-code-line "diff --git a/hledger-lib/Hledger/Reports/MultiBalanceReport.hs b/hledger-lib/Hledger/Reports/MultiBalanceReport.hs
+index 9eced0230..4512bb335 100644
+--- a/hledger-lib/Hledger/Reports/MultiBalanceReport.hs
++++ b/hledger-lib/Hledger/Reports/MultiBalanceReport.hs
+
+-type MultiBalanceReport    = PeriodicReport AccountLeaf MixedAmount
+-type MultiBalanceReportRow = PeriodicReportRow AccountLeaf MixedAmount
++type MultiBalanceReport    = PeriodicReport AccountName MixedAmount
++type MultiBalanceReportRow = PeriodicReportRow AccountName MixedAmount
+
+ -- type alias just to remind us which AccountNames might be depth-clipped, below.
+ type ClippedAccountName = AccountName
+")
+
+    (defconst example-diff-after-comments-in-code-line "diff --git a/hledger-lib/Hledger/Reports/MultiBalanceReport.hs b/hledger-lib/Hledger/Reports/MultiBalanceReport.hs
+index 9eced0230..4512bb335 100644
+--- a/hledger-lib/Hledger/Reports/MultiBalanceReport.hs
++++ b/hledger-lib/Hledger/Reports/MultiBalanceReport.hs
+
+-type MultiBalanceReport    = PeriodicReport AccountLeaf MixedAmount
+-type MultiBalanceReportRow = PeriodicReportRow AccountLeaf MixedAmount
+~ Reviewed by @babar[COMMENTED]: Very interesting change
+~ we should move forward
++type MultiBalanceReport    = PeriodicReport AccountName MixedAmount
++type MultiBalanceReportRow = PeriodicReportRow AccountName MixedAmount
+~ Reviewed by @babar[COMMENTED]: Change this code
+
+ -- type alias just to remind us which AccountNames might be depth-clipped, below.
+ type ClippedAccountName = AccountName
+")
+
     (defconst expected-review-deleted-comment-haskell
       '((body . "comment test")
         (comments
@@ -294,11 +325,35 @@ index 58baa4b..eae7707 100644
                                  'bodyText "LGTM"
                                  'state "APPROVED")))))
 
+    (defconst review-with-comments
+      (a-alist 'author (a-alist 'login "babar")
+               'state "COMMENTED"
+               'bodyText ""
+               'comments (a-alist
+                          'nodes
+                          (list (a-alist 'bodyText "Very interesting change\nwe should move forward"
+                                         'originalPosition 2)
+                           (a-alist 'bodyText "Change this code"
+                                         'originalPosition 4)
+                                ))))
+
     (describe "github-review-format-diff"
       (it "can format a simple diff"
         (expect (a-equal (github-review-format-diff simple-diff simple-pr)simple-context-expected-review)))
       (it "can format a diff with top level comments and review"
-        (expect (a-equal (github-review-format-diff simple-diff pr-with-tl-comments)  expected-review-tl-comment)))))
+        (expect (a-equal (github-review-format-diff simple-diff pr-with-tl-comments)  expected-review-tl-comment))))
+
+    (describe "github-review-place-review-comments"
+      (before-all
+        (setq github-review-comment-pos nil)
+        (setq github-review-view-comments-in-code-lines nil))
+      (it "can include PR comments made in code lines"
+        (expect (github-review-place-review-comments example-diff-before-comments-in-code-line review-with-comments)
+                :to-equal
+                example-diff-after-comments-in-code-line))
+      (it "`github-review-comment-pos' should have increased to 3 because we have 2 comments with 3 lines"
+        (expect github-review-comment-pos :to-equal 3))))
+
   (describe "entrypoints"
     (describe "github-review-start"
       :var (github-review-save-diff

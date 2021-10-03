@@ -352,12 +352,12 @@ This function infers the PR name based on the current filename"
 
 (defun github-review-to-comments (text)
   "Convert TEXT, a string to a string where each line is prefixed by ~."
-  (s-join "\n" (-concat (list " ") (-map (lambda (x) (concat "~ " x)) (s-split "\n" text)))))
+  (s-join "\n" (-map (lambda (x) (concat "~ " x)) (s-split "\n" text))))
 
 (defun github-review-format-top-level-comment (com)
   "Format a top level COM objectto string."
   (let-alist com
-    (format "Commented by @%s: %s" .author.login .bodyText)))
+    (format "@%s: %s" .author.login .bodyText)))
 
 (defun github-review-format-review (review)
   "Format a REVIEW object to string."
@@ -394,11 +394,12 @@ Github API provides only the originalPosition in the query.")
 
                  (setq github-review-comment-pos (+ (or github-review-comment-pos 0)
                                                     (length comment-lines)
-                                                    (length body-lines)))
+                                                    (if (string-empty-p body)
+                                                        0
+                                                      (length body-lines))))
                  (-concat
                   (-first-item diff-splitted)
-                  (list ""
-                        (format "~ Reviewed by @%s[%s]: %s" at state
+                  (list (format "~ Reviewed by @%s[%s]: %s" at state
                                 (if (string-empty-p body)
                                     (-first-item comment-lines)
                                   (-first-item body-lines))))
