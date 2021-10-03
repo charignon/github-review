@@ -333,9 +333,8 @@ index 58baa4b..eae7707 100644
                           'nodes
                           (list (a-alist 'bodyText "Very interesting change\nwe should move forward"
                                          'originalPosition 2)
-                           (a-alist 'bodyText "Change this code"
-                                         'originalPosition 4)
-                                ))))
+                                (a-alist 'bodyText "Change this code"
+                                         'originalPosition 4)))))
 
     (describe "github-review-format-diff"
       (it "can format a simple diff"
