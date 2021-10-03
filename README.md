@@ -119,6 +119,14 @@ machine api.github.com login yourlogin^github-review password MYTOKENGOESHERE
 If you use GitHub Enterprise, you can use the `github-review-host` custom variable to
 configure the endpoint of your GitHub Enterprise installation, this should look like `api.git.mycompany.com`.
 
+- By default, `github-review` fetches only top level comments in a pull request.
+  You can set `github-review-view-comments-in-code-lines` to `t` to also fetch
+  comments made between code lines.
+
+  You can also enable comments between code lines that are outdated by setting
+  `github-review-view-comments-in-code-lines-outdated` to `t`, however we cannot
+  guarantee correct placement of these comments in the review buffer.
+
 ## Notice
 
 *I am providing code in the repository to you under an open source license. Because this is my personal repository, the license you receive to my
