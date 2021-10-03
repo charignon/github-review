@@ -136,7 +136,7 @@ return a deferred object"
       reviews(first: 50) {
         nodes { author { login } bodyText state
           comments(first: 50)
-            { nodes { bodyText originalPosition } }}
+            { nodes { bodyText originalPosition databaseId } }}
       } }
   }
 }" .repo .owner .num)))
@@ -163,13 +163,31 @@ PR-ALIST is an alist representing a PR
 REVIEW is the review alist
 CALLBACK will be called back when done"
   (let-alist pr-alist
-    (ghub-post (format "/repos/%s/%s/pulls/%s/reviews" .owner .repo .num)
+    (ghub-post (format "/repos/%s/%s/pulls/%s/review" .owner .repo .num)
                nil
                :auth 'github-review
                :payload review
                :host (github-review-api-host pr-alist)
                :errorback #'github-review-errback
                :callback callback)))
+
+(defun github-review-post-review-replies (pr-alist replies callback)
+  "Submit replies to review comments inline."
+  (let-alist pr-alist
+    (-map
+     (lambda (comment)
+       (let* ((position (a-get comment 'position))
+              (comment-id (a-get github-review-pos->databaseid position))
+              (body (a-get comment 'body)))
+         (ghub-post (format "/repos/%s/%s/pulls/%s/comments/%s/replie" .owner .repo .num comment-id)
+                    nil
+                    :payload (a-alist 'body body)
+                    :headers github-review-diffheader
+                    :auth 'github-review
+                    :host "api.github.com"
+                    :callback (lambda (&rest _))
+                    :errorback #'github-review-errback)))
+     replies)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Code review file parsing ;;
@@ -245,7 +263,8 @@ ACC is an alist accumulating parsing state."
            (in-file? (not top-level?)))
       (cond
        ;; Previous comments are ignored and don't affect the parsing
-       ((github-review-previous-comment? l) acc)
+       ((github-review-previous-comment? l)
+        (a-assoc acc 'mark-previous-comment t))
 
        ;; First cgithub-review-hunk
        ((and top-level? (github-review-hunk? l))
@@ -270,14 +289,17 @@ ACC is an alist accumulating parsing state."
           ;; For such comments we report it on on the first line
           (a-alist 'position (max .pos 1)
                    'path .path
-                   'body (github-review-comment-text l))
+                   'body (github-review-comment-text l)
+                   'reply? .mark-previous-comment)
           .comments)))
 
        ;; Header before the filenames, restart the position
        ((github-review-is-start-of-file-hunk? l) (a-assoc acc 'pos nil))
 
        ;; Any other line in a file
-       (in-file? (a-assoc acc 'pos (+ 1 .pos)))
+       (in-file? (a-assoc acc
+                          'pos (+ 1 .pos)
+                          'mark-previous-comment nil))
 
        (t acc)))))
 
@@ -286,6 +308,7 @@ ACC is an alist accumulating parsing state."
   (let* ((acc (a-alist 'path nil
                        'pos nil
                        'body ""
+                       'mark-previous-comment nil
                        'comments ()))
          (parsed-data (-reduce-from #'github-review-parse-line acc lines))
          (parsed-comments (a-get parsed-data 'comments))
@@ -343,8 +366,26 @@ This function infers the PR name based on the current filename"
   (message "Submitting review, this may take a while ...")
   (let* ((pr-alist (github-review-pr-from-fname (buffer-file-name)))
          (parsed-review (github-review-parsed-review-from-current-buffer))
+         (comments (a-get parsed-review 'comments))
+         (regular-comments (-map
+                            (lambda (c)
+                              (a-dissoc c 'reply?))
+                            (-filter
+                             (lambda (c) (not (a-get c 'reply?)))
+                             comments)))
+         (reply-comments (-filter (lambda (c) (a-get c 'reply?))
+                                  comments))
          (head-sha (a-get pr-alist 'sha))
-         (review (a-assoc parsed-review 'commit_id head-sha 'event kind)))
+         (review (a-assoc parsed-review
+                          'commit_id head-sha
+                          'event kind
+                          'comments regular-comments)))
+    (github-review-post-review-replies
+     pr-alist
+     reply-comments
+     (lambda (&rest _)
+       (message "Done submitting review replies")))
+
     (github-review-post-review
      pr-alist
      review (lambda (&rest _)
@@ -365,6 +406,8 @@ This function infers the PR name based on the current filename"
     (if (not (string-empty-p .bodyText))
         (format "Reviewed by @%s[%s]: %s" .author.login .state .bodyText)
       "")))
+
+(defvar github-review-pos->databaseid ())
 
 (defvar github-review-comment-pos nil
   "Variable to count how many comments in code lines were added in the diff.
@@ -391,6 +434,9 @@ Github API provides only the originalPosition in the query.")
                                        (or github-review-comment-pos 0)))
                       (comment-lines (split-string (a-get comment 'bodyText) "\n"))
                       (diff-splitted (-split-at adjusted-pos acc-diff)))
+
+                 (push (cons original-pos (a-get comment 'databaseId))
+                       github-review-pos->databaseid)
 
                  (setq github-review-comment-pos (+ (or github-review-comment-pos 0)
                                                     (length comment-lines)
@@ -444,6 +490,7 @@ Github API provides only the originalPosition in the query.")
      (if github-review-view-comments-in-code-lines
          (progn
            (setq github-review-comment-pos nil)
+           (setq github-review-pos->databaseid ())
            (-reduce-from
             (lambda (acc-gitdiff node)
               (github-review-place-review-comments acc-gitdiff node))
