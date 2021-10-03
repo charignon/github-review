@@ -68,6 +68,11 @@
   "Flag to enable displaying outdated comments in code lines."
   :group 'github-review)
 
+(defcustom github-review-reply-inline-comments nil
+  "Flag to enable replies to inline comments.
+
+This flag will only be valid if `github-review-view-comments-in-code-lines' is set to `t`.")
+
 (defconst github-review-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
   "Header for requesting diffs from GitHub.")
 
@@ -140,7 +145,7 @@ return a deferred object"
       reviews(first: 50) {
         nodes { author { login } bodyText state
           comments(first: 50)
-            { nodes { bodyText originalPosition position outdated path} }}
+            { nodes { bodyText originalPosition position outdated path databaseId} }}
       } }
   }
 }" .repo .owner .num)))
@@ -175,6 +180,31 @@ CALLBACK will be called back when done"
                :errorback #'github-review-errback
                :callback callback)))
 
+(defun github-review-post-review-replies (pr-alist replies callback)
+  "Submit replies to review comments inline."
+  (let-alist pr-alist
+    (-map
+     (lambda (comment)
+       (let* ((path (a-get comment 'path))
+              (position (a-get comment 'position))
+              (comment-id (alist-get (s-concat path
+                                               ":"
+                                               (number-to-string position))
+                                     github-review-pos->databaseid
+                                     nil nil 'equal))
+              (body (a-get comment 'body)))
+         (ghub-post (format "/repos/%s/%s/pulls/%s/comments/%s/replies"
+                            .owner .repo .num comment-id)
+                    nil
+                    :payload (a-alist 'body body)
+                    :headers github-review-diffheader
+                    :auth 'github-review
+                    :host (github-review-api-host pr-alist)
+                    :callback (lambda (&rest _))
+                    :errorback #'github-review-errback)))
+     replies)
+    (funcall callback)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Code review file parsing ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -195,7 +225,7 @@ CALLBACK will be called back when done"
 
 (defun github-review-previous-comment? (l)
   "Return t if L, a string, is a comment from previous review."
-  (string-prefix-p "~ " l))
+  (string-prefix-p "~" l))
 
 (defun github-review-is-start-of-file-hunk? (l)
   "Return t if L, a string that start with 'diff' marking the start of a file hunk."
@@ -248,8 +278,11 @@ ACC is an alist accumulating parsing state."
     (let* ((top-level? (equal nil .pos))
            (in-file? (not top-level?)))
       (cond
-       ;; Previous comments are ignored and don't affect the parsing
-       ((github-review-previous-comment? l) acc)
+       ;; Previous comments are marked if not top level and will be used to distinguish replies from new code comments
+       ((github-review-previous-comment? l)
+        (if .pos
+            (a-assoc acc 'previous-comment? t)
+          acc))
 
        ;; First cgithub-review-hunk
        ((and top-level? (github-review-hunk? l))
@@ -274,14 +307,18 @@ ACC is an alist accumulating parsing state."
           ;; For such comments we report it on on the first line
           (a-alist 'position (max .pos 1)
                    'path .path
-                   'body (github-review-comment-text l))
+                   'body (github-review-comment-text l)
+                   'reply? .previous-comment?)
           .comments)))
 
        ;; Header before the filenames, restart the position
        ((github-review-is-start-of-file-hunk? l) (a-assoc acc 'pos nil))
 
        ;; Any other line in a file
-       (in-file? (a-assoc acc 'pos (+ 1 .pos)))
+       (in-file?
+        (a-assoc acc
+                 'pos (+ 1 .pos)
+                 'previous-comment? nil))
 
        (t acc)))))
 
@@ -290,7 +327,8 @@ ACC is an alist accumulating parsing state."
   (let* ((acc (a-alist 'path nil
                        'pos nil
                        'body ""
-                       'comments ()))
+                       'comments ()
+                       'previous-comment? nil))
          (parsed-data (-reduce-from #'github-review-parse-line acc lines))
          (parsed-comments (a-get parsed-data 'comments))
          (parsed-body (s-trim-right (a-get parsed-data 'body)))
@@ -347,8 +385,31 @@ This function infers the PR name based on the current filename"
   (message "Submitting review, this may take a while ...")
   (let* ((pr-alist (github-review-pr-from-fname (buffer-file-name)))
          (parsed-review (github-review-parsed-review-from-current-buffer))
+         (comments (a-get parsed-review 'comments))
+         (regular-comments (->> comments
+                                (-filter
+                                 (lambda (c)
+                                   (not (a-get c 'reply?))))
+                                (-map
+                                 (lambda (c)
+                                   (a-dissoc c 'reply?)))))
+         (reply-comments (-filter
+                          (lambda (c)
+                            (a-get c 'reply?))
+                          comments))
          (head-sha (a-get pr-alist 'sha))
-         (review (a-assoc parsed-review 'commit_id head-sha 'event kind)))
+         (review (a-assoc parsed-review
+                          'commit_id head-sha
+                          'event kind
+                          'comments regular-comments)))
+
+    (when github-review-reply-inline-comments
+      (github-review-post-review-replies
+       pr-alist
+       reply-comments
+       (lambda (&rest _)
+         (message "Done submitting review replies"))))
+
     (github-review-post-review
      pr-alist
      review (lambda (&rest _)
@@ -377,6 +438,9 @@ Github API provides only the originalPosition in the query.")
 
 (defun github-review--get-how-many-comments-written (path)
   (or (a-get github-review-comment-pos path) 0))
+
+(defvar github-review-pos->databaseid ()
+  "Hold databaseID to each path and comment combination")
 
 (defun github-review-place-review-comments (gitdiff review)
   (if (not (a-get-in review (list 'comments 'nodes)))
@@ -415,6 +479,15 @@ Github API provides only the originalPosition in the query.")
                       (if (string-empty-p body)
                           0
                         (length body-lines))))
+
+             ;; save databaseID to each path and comment combination
+             (setf (alist-get (s-concat
+                               path ":"
+                               (number-to-string
+                                (or position original-pos)))
+                              github-review-pos->databaseid
+                              nil nil 'equal)
+                   (a-get comment 'databaseId))
 
              ;; include comments on buffer for this path
              (let* ((result
@@ -470,6 +543,7 @@ Github API provides only the originalPosition in the query.")
      (if github-review-view-comments-in-code-lines
          (progn
            (setq github-review-comment-pos ())
+           (setq github-review-pos->databaseid ())
            (-reduce-from
             (lambda (acc-gitdiff node)
               (github-review-place-review-comments acc-gitdiff node))
