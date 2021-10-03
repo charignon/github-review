@@ -332,9 +332,15 @@ index 58baa4b..eae7707 100644
                'comments (a-alist
                           'nodes
                           (list (a-alist 'bodyText "Very interesting change\nwe should move forward"
-                                         'originalPosition 2)
+                                         'originalPosition 2
+                                         'outdated nil
+                                         'position ""
+                                         'path "hledger-lib/Hledger/Reports/MultiBalanceReport.hs")
                                 (a-alist 'bodyText "Change this code"
-                                         'originalPosition 4)))))
+                                         'originalPosition 4
+                                         'outdated nil
+                                         'position ""
+                                         'path "hledger-lib/Hledger/Reports/MultiBalanceReport.hs")))))
 
     (describe "github-review-format-diff"
       (it "can format a simple diff"
@@ -344,14 +350,15 @@ index 58baa4b..eae7707 100644
 
     (describe "github-review-place-review-comments"
       (before-all
-        (setq github-review-comment-pos nil)
-        (setq github-review-view-comments-in-code-lines nil))
+        (setq github-review-comment-pos ())
+        (setq github-review-view-comments-in-code-lines nil)
+        (setq github-review-view-comments-in-code-lines-outdated nil))
       (it "can include PR comments made in code lines"
         (expect (github-review-place-review-comments example-diff-before-comments-in-code-line review-with-comments)
                 :to-equal
                 example-diff-after-comments-in-code-line))
       (it "`github-review-comment-pos' should have increased to 3 because we have 2 comments with 3 lines"
-        (expect github-review-comment-pos :to-equal 3))))
+        (expect github-review-comment-pos :to-equal '(("hledger-lib/Hledger/Reports/MultiBalanceReport.hs" . 3))))))
 
   (describe "entrypoints"
     (describe "github-review-start"

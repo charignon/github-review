@@ -64,6 +64,10 @@
   "Flag to enable displaying comments in code lines."
   :group 'github-review)
 
+(defcustom github-review-view-comments-in-code-lines-outdated nil
+  "Flag to enable displaying outdated comments in code lines."
+  :group 'github-review)
+
 (defconst github-review-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
   "Header for requesting diffs from GitHub.")
 
@@ -136,7 +140,7 @@ return a deferred object"
       reviews(first: 50) {
         nodes { author { login } bodyText state
           comments(first: 50)
-            { nodes { bodyText originalPosition } }}
+            { nodes { bodyText originalPosition position outdated path} }}
       } }
   }
 }" .repo .owner .num)))
@@ -366,10 +370,13 @@ This function infers the PR name based on the current filename"
         (format "Reviewed by @%s[%s]: %s" .author.login .state .bodyText)
       "")))
 
-(defvar github-review-comment-pos nil
+(defvar github-review-comment-pos ()
   "Variable to count how many comments in code lines were added in the diff.
 This is necessary to adjust the new comments to the correct position in the diff given that
 Github API provides only the originalPosition in the query.")
+
+(defun github-review--get-how-many-comments-written (path)
+  (or (a-get github-review-comment-pos path) 0))
 
 (defun github-review-place-review-comments (gitdiff review)
   (if (not (a-get-in review (list 'comments 'nodes)))
@@ -379,43 +386,62 @@ Github API provides only the originalPosition in the query.")
            (body-lines (split-string body "\n"))
            (state (a-get review 'state))
 
-           (diffs (split-string gitdiff "\n"))
            (comments (a-get-in review (list 'comments 'nodes)))
-           (default-shift-pos 5)
-           (diffs-new
-            (-reduce-from
-             (lambda (acc-diff comment)
-               (let* ((original-pos (a-get comment 'originalPosition))
-                      (adjusted-pos (+ original-pos
-                                       default-shift-pos
-                                       (or github-review-comment-pos 0)))
-                      (comment-lines (split-string (a-get comment 'bodyText) "\n"))
-                      (diff-splitted (-split-at adjusted-pos acc-diff)))
+           (default-shift-pos 1))
+      (-reduce-from
+       (lambda (acc-diff comment)
+         (if (and (not github-review-view-comments-in-code-lines-outdated)
+                  (a-get comment 'outdated))
+             acc-diff
+           (let* ((path (a-get comment 'path))
+                  (original-pos (a-get comment 'originalPosition))
+                  (-position (a-get comment 'position))
+                  (position (when (numberp -position) -position))
+                  (adjusted-pos (+ (or position original-pos)
+                                   default-shift-pos
+                                   (github-review--get-how-many-comments-written path)))
+                  (comment-lines (split-string (a-get comment 'bodyText) "\n"))
 
-                 (setq github-review-comment-pos (+ (or github-review-comment-pos 0)
-                                                    (length comment-lines)
-                                                    (if (string-empty-p body)
-                                                        0
-                                                      (length body-lines))))
-                 (-concat
-                  (-first-item diff-splitted)
-                  (list (format "~ Reviewed by @%s[%s]: %s" at state
-                                (if (string-empty-p body)
-                                    (-first-item comment-lines)
-                                  (-first-item body-lines))))
-                  (-map
-                   (lambda (commentLine) (s-concat "~ " (s-trim-left commentLine)))
-                   (-concat
-                    (-drop 1 body-lines)
-                    (if (string-empty-p body)
-                        (-drop 1 comment-lines)
-                      comment-lines)))
-                  (-second-item diff-splitted))))
-             diffs
-             comments)))
-      (s-join
-       "\n"
-       diffs-new))))
+                  ;; get diff lines specific for the current path
+                  (gitdiff-path (s-concat "+++ b/" path "\n"))
+                  (gitdiff-splitted-on-path (split-string acc-diff gitdiff-path))
+                  (gitdiff-on-path-lines (split-string (-second-item gitdiff-splitted-on-path) "\n"))
+                  (gitdiff-on-path-splitted (-split-at adjusted-pos gitdiff-on-path-lines)))
+
+             ;; save how many lines of comments was written in the buffer for this path
+             (setf (alist-get path github-review-comment-pos nil nil 'equal)
+                   (+ (github-review--get-how-many-comments-written path)
+                      (length comment-lines)
+                      (if (string-empty-p body)
+                          0
+                        (length body-lines))))
+
+             ;; include comments on buffer for this path
+             (let* ((result
+                     (-concat
+                      (-first-item gitdiff-on-path-splitted)
+                      (list (format "~ Reviewed by @%s[%s]: %s" at state
+                                    (if (string-empty-p body)
+                                        (-first-item comment-lines)
+                                      (-first-item body-lines))))
+                      (-map
+                       (lambda (commentLine) (s-concat "~ " (s-trim-left commentLine)))
+                       (-concat
+                        (-drop 1 body-lines)
+                        (if (string-empty-p body)
+                            (-drop 1 comment-lines)
+                          comment-lines)))
+                      (-second-item gitdiff-on-path-splitted)))
+                    (gitdiff-on-path-new (s-concat
+                                          gitdiff-path
+                                          (s-join "\n" result))))
+
+               ;; join this path with beginning of the diff
+               (s-concat
+                (-first-item gitdiff-splitted-on-path)
+                gitdiff-on-path-new)))))
+       gitdiff
+       comments))))
 
 (defun github-review-format-diff (gitdiff pr)
   "Formats a GITDIFF and PR to save it for review."
@@ -443,7 +469,7 @@ Github API provides only the originalPosition in the query.")
                "\n"))
      (if github-review-view-comments-in-code-lines
          (progn
-           (setq github-review-comment-pos nil)
+           (setq github-review-comment-pos ())
            (-reduce-from
             (lambda (acc-gitdiff node)
               (github-review-place-review-comments acc-gitdiff node))
