@@ -333,10 +333,9 @@ ACC is an alist accumulating parsing state."
          (parsed-comments (a-get parsed-data 'comments))
          (parsed-body (s-trim-right (a-get parsed-data 'body)))
          (merged-comments (when parsed-comments (github-review-merge-comments (reverse parsed-comments)))))
-    (if (equal nil merged-comments)
-        `((body . ,parsed-body))
-      `((body . ,parsed-body)
-        (comments . ,(reverse merged-comments))))))
+    `((body . ,parsed-body)
+      (comments . ,(reverse merged-comments)))))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Buffer interactions ;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -379,31 +378,43 @@ ACC is an alist accumulating parsing state."
 ;; Helpers ;;
 ;;;;;;;;;;;;;
 
+(defun github-review--split-comments-by-type (comments)
+  "Return A-LIST with regular-comments and reply-comments."
+  (if (equal nil comments)
+      `((regular-comments . ,nil)
+        (reply-comments . ,nil))
+    (let* ((regular-comments (->> comments
+                                  (-filter (lambda (c)
+                                             (not (a-get c 'reply?))))
+                                  (-map (lambda (c)
+                                          (a-dissoc c 'reply?)))))
+           (reply-comments (-filter (lambda (c)
+                                      (a-get c 'reply?))
+                                    comments)))
+      `((regular-comments . ,regular-comments)
+        (reply-comments . ,reply-comments)))))
+
 (defun github-review-submit-review (kind)
   "Submit a code review of KIND.
 This function infers the PR name based on the current filename"
   (message "Submitting review, this may take a while ...")
   (let* ((pr-alist (github-review-pr-from-fname (buffer-file-name)))
          (parsed-review (github-review-parsed-review-from-current-buffer))
-         (comments (a-get parsed-review 'comments))
-         (regular-comments (->> comments
-                                (-filter
-                                 (lambda (c)
-                                   (not (a-get c 'reply?))))
-                                (-map
-                                 (lambda (c)
-                                   (a-dissoc c 'reply?)))))
-         (reply-comments (-filter
-                          (lambda (c)
-                            (a-get c 'reply?))
-                          comments))
+         (comments (github-review--split-comments-by-type
+                    (a-get parsed-review 'comments)))
+         (regular-comments (a-get comments 'regular-comments))
+         (reply-comments (a-get comments 'reply-comments))
          (head-sha (a-get pr-alist 'sha))
-         (review (a-assoc parsed-review
-                          'commit_id head-sha
-                          'event kind
-                          'comments regular-comments)))
+         (partial-review (a-assoc parsed-review
+                                  'commit_id head-sha
+                                  'event kind))
+         (review (if (equal nil regular-comments)
+                     (a-assoc partial-review
+                              'comments regular-comments)
+                   partial-review)))
 
-    (when github-review-reply-inline-comments
+    (when (and github-review-reply-inline-comments
+               reply-comments)
       (github-review-post-review-replies
        pr-alist
        reply-comments
@@ -412,8 +423,9 @@ This function infers the PR name based on the current filename"
 
     (github-review-post-review
      pr-alist
-     review (lambda (&rest _)
-              (message "Done submitting review")))))
+     review
+     (lambda (&rest _)
+       (message "Done submitting review")))))
 
 (defun github-review-to-comments (text)
   "Convert TEXT, a string to a string where each line is prefixed by ~."
