@@ -329,7 +329,8 @@ ACC is an alist accumulating parsing state."
     (erase-buffer)
     (insert diff)
     (save-buffer)
-    (github-review-mode)))
+    (github-review-mode)
+    (goto-char (point-min))))
 
 (defun github-review-parsed-review-from-current-buffer ()
   "Return a code review given the current buffer containing a diff."
