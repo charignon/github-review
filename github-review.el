@@ -330,9 +330,9 @@ ACC is an alist accumulating parsing state."
     (insert diff)
     (save-buffer)
     (github-review-mode)
-
     ;; Use `C-c C-c' in diff-mode to go to source code
-    (setq default-directory forge-current-dir)))
+    (setq default-directory forge-current-dir)
+    (goto-char (point-min))))
 
 (defun github-review-parsed-review-from-current-buffer ()
   "Return a code review given the current buffer containing a diff."
