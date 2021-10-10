@@ -1,6 +1,7 @@
 .PHONY: ci local test
 
 test:
+	cask install
 	cask exec buttercup -L test/github-review-test.el
 
 # Run the tests locally
