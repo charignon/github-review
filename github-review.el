@@ -335,12 +335,7 @@ ACC is an alist accumulating parsing state."
     (github-review-mode)
 
     ;; Use `C-c C-c' in diff-mode to go to source code
-    (when-let ((repo-path (alist-get
-                           (format "%s/%s" .owner .repo)
-                           github-review-projects-worktree
-                           nil nil 'equal)))
-      (setq diff-remembered-defdir repo-path)
-      (setq default-directory repo-path))))
+    (setq default-directory forge-current-dir)))
 
 (defun github-review-parsed-review-from-current-buffer ()
   "Return a code review given the current buffer containing a diff."
@@ -516,6 +511,7 @@ Github API provides only the originalPosition in the query.")
   (interactive)
   (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
          (repo    (forge-get-repository pullreq)))
+    (setq forge-current-dir default-directory)
     (github-review-start-internal (a-alist 'owner   (oref repo owner)
                                            'repo    (oref repo name)
                                            'apihost (oref repo apihost)

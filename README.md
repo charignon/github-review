@@ -133,18 +133,6 @@ configure the endpoint of your GitHub Enterprise installation, this should look 
   you include a comment right after a previous received comment in the diff
   buffer, your new comment will be sent as a reply.
 
-- By default, `github-review` does not allow you to move back and forth the diff
-  buffer and the actual source code.
-  You can define a list of projects and the respective directory location to
-  enable `diff-goto-source` (bound to `C-c c-c` by default) e.g.:
-  ```elisp
-
-  (setq github-review-projects-worktree
-          '(("charignon/github-review". "~/.doom.d/sources/github-review")
-            ("magit/forge" . "~/code/oss/magit-forge")))
-
-  ```
-
 ## Notice
 
 *I am providing code in the repository to you under an open source license. Because this is my personal repository, the license you receive to my
