@@ -100,10 +100,17 @@ If you just want to install `github-review` separately, add the following to you
 
 ## Configuration
 
+### GitHub
+
 `github-review` needs a GitHub token to act on your behalf for fetching PRs and
 submitting reviews.
 
-[Create a personal access token using GitHub](https://github.com/settings/tokens) and add a line to your auth source files with your login and token:
+1. [Create a personal access token using GitHub](https://github.com/settings/tokens)
+2. Set the `repo` scope as the subscope of repo
+3. If using GitHub enterprise / for business you also need the `write:discussion` `read:discussion` scope.
+
+### Auth
+Add a line to your auth source files with your login and token:
 
 ```
 machine api.github.com login yourlogin^github-review password MYTOKENGOESHERE
@@ -112,7 +119,15 @@ machine api.github.com login yourlogin^github-review password MYTOKENGOESHERE
 ## Customization
 
 If you use GitHub Enterprise, you can use the `github-review-host` custom variable to
-configure the endpoint of your GitHub Enterprise installation.
+configure the endpoint of your GitHub Enterprise installation, this should look like `api.git.mycompany.com`.
+
+- By default, `github-review` fetches only top level comments in a pull request.
+  You can set `github-review-view-comments-in-code-lines` to `t` to also fetch
+  comments made between code lines.
+
+  You can also enable comments between code lines that are outdated by setting
+  `github-review-view-comments-in-code-lines-outdated` to `t`, however we cannot
+  guarantee correct placement of these comments in the review buffer.
 
 ## Notice
 
