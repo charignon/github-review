@@ -409,9 +409,9 @@ This function infers the PR name based on the current filename"
                                   'commit_id head-sha
                                   'event kind))
          (review (if (equal nil regular-comments)
-                     (a-assoc partial-review
-                              'comments regular-comments)
-                   partial-review)))
+                     partial-review
+                   (a-assoc partial-review
+                            'comments regular-comments))))
 
     (when (and github-review-reply-inline-comments
                reply-comments)
