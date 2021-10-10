@@ -378,21 +378,28 @@ ACC is an alist accumulating parsing state."
 ;; Helpers ;;
 ;;;;;;;;;;;;;
 
+(defun github-review--filter-reply-comments (comments)
+  "If comments exist, return only reply comments."
+  (when comments
+    (-filter (lambda (c) (a-get c 'reply?)) comments)))
+
+(defun github-review--filter-code-comments (comments)
+  "If comments exist, return only code comments."
+  (when comments
+    (let ((filter-code-comments (lambda (c) (not (a-get c 'reply?))))
+          (clean-reply-placeholders (lambda (c) (a-dissoc c 'reply?))))
+      (->> comments
+           (-filter filter-code-comments)
+           (-map clean-reply-placeholders)))))
+
 (defun github-review--split-comments-by-type (comments)
   "Return A-LIST with regular-comments and reply-comments."
-  (if (equal nil comments)
-      `((regular-comments . ,nil)
-        (reply-comments . ,nil))
-    (let* ((regular-comments (->> comments
-                                  (-filter (lambda (c)
-                                             (not (a-get c 'reply?))))
-                                  (-map (lambda (c)
-                                          (a-dissoc c 'reply?)))))
-           (reply-comments (-filter (lambda (c)
-                                      (a-get c 'reply?))
-                                    comments)))
-      `((regular-comments . ,regular-comments)
-        (reply-comments . ,reply-comments)))))
+  (let ((regular-comments
+         (github-review--filter-code-comments comments))
+        (reply-comments
+         (github-review--filter-reply-comments comments)))
+    `((regular-comments . ,regular-comments)
+      (reply-comments . ,reply-comments))))
 
 (defun github-review-submit-review (kind)
   "Submit a code review of KIND.
