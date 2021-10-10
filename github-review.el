@@ -68,9 +68,6 @@
   "Flag to enable displaying outdated comments in code lines."
   :group 'github-review)
 
-(defcustom github-review-projects-worktree ()
-  "Define directory path for your projects to be used by `diff-goto-source'. ")
-
 (defconst github-review-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
   "Header for requesting diffs from GitHub.")
 

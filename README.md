@@ -127,12 +127,6 @@ configure the endpoint of your GitHub Enterprise installation, this should look 
   `github-review-view-comments-in-code-lines-outdated` to `t`, however we cannot
   guarantee correct placement of these comments in the review buffer.
 
-  You can also enable replies to inline comments by setting
-  `github-review-reply-inline-comments` to `t`, this feature only works if
-  `github-review-view-comments-in-code-lines` is also set to `t`. This way, if
-  you include a comment right after a previous received comment in the diff
-  buffer, your new comment will be sent as a reply.
-
 ## Notice
 
 *I am providing code in the repository to you under an open source license. Because this is my personal repository, the license you receive to my
