@@ -341,8 +341,10 @@ ACC is an alist accumulating parsing state."
          (parsed-comments (a-get parsed-data 'comments))
          (parsed-body (s-trim-right (a-get parsed-data 'body)))
          (merged-comments (when parsed-comments (github-review-merge-comments (reverse parsed-comments)))))
-    `((body . ,parsed-body)
-      (comments . ,(reverse merged-comments)))))
+    (if (equal nil merged-comments)
+        `((body . ,parsed-body))
+      `((body . ,parsed-body)
+        (comments . ,(reverse merged-comments))))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Buffer interactions ;;
@@ -614,12 +616,12 @@ Github API provides only the originalPosition in the query.")
 
     (if (not (forge-pullreq-p pullreq))
         (message "We can only review PRs at the moment. You tried on something else.")
-        (progn 
-          (setq forge-current-dir default-directory)  
-          (github-review-start-internal (a-alist  'owner   (oref repo owner)
-                                                  'repo    (oref repo name)
-                                                  'apihost (oref repo apihost)
-                                                  'num     (oref pullreq number)))))))
+      (progn
+        (setq forge-current-dir default-directory)
+        (github-review-start-internal (a-alist  'owner   (oref repo owner)
+                                                'repo    (oref repo name)
+                                                'apihost (oref repo apihost)
+                                                'num     (oref pullreq number)))))))
 
 ;;;###autoload
 (defun github-review-start (url)
