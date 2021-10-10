@@ -71,7 +71,7 @@
 (defcustom github-review-reply-inline-comments nil
   "Flag to enable replies to inline comments.
 
-This flag will only be valid if `github-review-view-comments-in-code-lines' is set to `t`.")
+This flag will only be considered if `github-review-view-comments-in-code-lines' is set to `t`.")
 
 (defconst github-review-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
   "Header for requesting diffs from GitHub.")
