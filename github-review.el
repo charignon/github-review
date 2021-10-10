@@ -68,6 +68,9 @@
   "Flag to enable displaying outdated comments in code lines."
   :group 'github-review)
 
+(defcustom github-review-projects-worktree ()
+  "Define directory path for your projects to be used by `diff-goto-source'. ")
+
 (defconst github-review-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
   "Header for requesting diffs from GitHub.")
 
@@ -329,7 +332,15 @@ ACC is an alist accumulating parsing state."
     (erase-buffer)
     (insert diff)
     (save-buffer)
-    (github-review-mode)))
+    (github-review-mode)
+
+    ;; Use `C-c C-c' in diff-mode to go to source code
+    (when-let ((repo-path (alist-get
+                           (format "%s/%s" .owner .repo)
+                           github-review-projects-worktree
+                           nil nil 'equal)))
+      (setq diff-remembered-defdir repo-path)
+      (setq default-directory repo-path))))
 
 (defun github-review-parsed-review-from-current-buffer ()
   "Return a code review given the current buffer containing a diff."
