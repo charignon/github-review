@@ -225,7 +225,7 @@ CALLBACK will be called back when done"
 
 (defun github-review-previous-comment? (l)
   "Return t if L, a string, is a comment from previous review."
-  (string-prefix-p "~" l))
+  (string-prefix-p "~ " l))
 
 (defun github-review-is-start-of-file-hunk? (l)
   "Return t if L, a string that start with 'diff' marking the start of a file hunk."
