@@ -508,15 +508,15 @@ Github API provides only the originalPosition in the query.")
   (interactive)
   (let* ((pullreq (or (forge-pullreq-at-point) (forge-current-topic)))
          (repo    (forge-get-repository pullreq)))
-        
+
     (if (not (forge-pullreq-p pullreq))
         (message "We can only review PRs at the moment. You tried on something else.")
-      (progn 
-        (setq forge-current-dir default-directory)  
-        (github-review-start-internal (a-alist 'owner   (oref repo owner)
-                                               'repo    (oref repo name)
-                                               'apihost (oref repo apihost)
-                                               'num     (oref pullreq number)))))))
+        (progn 
+          (setq forge-current-dir default-directory)  
+          (github-review-start-internal (a-alist  'owner   (oref repo owner)
+                                                  'repo    (oref repo name)
+                                                  'apihost (oref repo apihost)
+                                                  'num     (oref pullreq number)))))))
 
 ;;;###autoload
 (defun github-review-start (url)
