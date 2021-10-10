@@ -10,6 +10,8 @@ jobs:
         with:
           version: '27.1'
       - uses: conao3/setup-cask@master
+        with:
+          version: 'snapshot'
 
       - name: Run tests
-        run: make ci
+        run: make test

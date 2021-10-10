@@ -1,8 +1,4 @@
 .PHONY: ci local test
-ci:
-	cask upgrade-cask
-	cask install
-	cask exec buttercup -L test/github-review-test.el
 
 test:
 	cask exec buttercup -L test/github-review-test.el
