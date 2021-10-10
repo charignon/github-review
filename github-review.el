@@ -436,11 +436,13 @@ This function infers the PR name based on the current filename"
        (lambda (&rest _)
          (message "Done submitting review replies"))))
 
-    (github-review-post-review
-     pr-alist
-     review
-     (lambda (&rest _)
-       (message "Done submitting review")))))
+    (when (or regular-comments
+              (not (string-empty-p (a-get review 'body))))
+      (github-review-post-review
+       pr-alist
+       review
+       (lambda (&rest _)
+         (message "Done submitting review"))))))
 
 (defun github-review-to-comments (text)
   "Convert TEXT, a string to a string where each line is prefixed by ~."
