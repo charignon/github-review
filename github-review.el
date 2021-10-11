@@ -653,6 +653,7 @@ Github API provides only the originalPosition in the query.")
   "Major mode for code review"
   (setq mode-name "Code Review"
         major-mode 'github-review-mode)
+  (add-hook 'github-review-mode-hook #'outline-minor-mode)
   (run-mode-hooks 'github-review-mode-hook))
 
 (provide 'github-review)
