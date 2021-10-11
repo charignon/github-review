@@ -84,7 +84,8 @@ index 8ad537d..0000000
         (comments
          ((position . 5)
           (body . "Comment test")
-          (path . "bar")))))
+          (path . "bar")
+          (reply? . nil)))))
 
     (defconst example-review-deleted-comment-haskell "# comment test
 ~ remove bad
@@ -165,10 +166,12 @@ index 9eced0230..4512bb335 100644
         (comments
          ((position . 5)
           (body . "Comment test")
-          (path . "bar"))
+          (path . "bar")
+          (reply? . nil))
          ((position . 6)
           (body . "here too")
-          (path . "hledger-lib/Hledger/Reports/MultiBalanceReport.hs")))))
+          (path . "hledger-lib/Hledger/Reports/MultiBalanceReport.hs")
+          (reply? . nil)))))
 
     (defconst examplediff "# This is a global comment at the top of the file
 # with multiple
@@ -243,23 +246,28 @@ index 58baa4b..eae7707 100644
         (comments
          ((position . 1)
           (body . "comment on zeroth line\ncomment on first line")
-          (path . "content/reference/google-closure-library.adoc"))
+          (path . "content/reference/google-closure-library.adoc")
+          (reply? . nil))
          ((position . 5)
           (body . "And a comment inline about\na specific line\n```with some\ncode```")
-          (path . "content/reference/google-closure-library.adoc"))
+          (path . "content/reference/google-closure-library.adoc")
+          (reply? . nil))
          ((position . 6)
           (body . "Some other comment inline")
-          (path . "content/reference/google-closure-library.adoc")))))
+          (path . "content/reference/google-closure-library.adoc")
+          (reply? . nil)))))
 
     (defconst complex-review-expected-no-comment-on-zeroth-and-first-line
       '((body . "This is a global comment at the top of the file\nwith multiple\nlines")
         (comments
          ((position . 5)
           (body . "And a comment inline about\na specific line\n```with some\ncode```")
-          (path . "content/reference/google-closure-library.adoc"))
+          (path . "content/reference/google-closure-library.adoc")
+          (reply? . t))
          ((position . 6)
           (body . "Some other comment inline")
-          (path . "content/reference/google-closure-library.adoc")))))
+          (path . "content/reference/google-closure-library.adoc")
+          (reply? . nil)))))
 
 
     (describe "github-review-parse-review-lines"
@@ -352,7 +360,8 @@ index 58baa4b..eae7707 100644
       (before-all
         (setq github-review-comment-pos ())
         (setq github-review-view-comments-in-code-lines nil)
-        (setq github-review-view-comments-in-code-lines-outdated nil))
+        (setq github-review-view-comments-in-code-lines-outdated nil)
+        (setq github-review-reply-inline-comments nil))
       (it "can include PR comments made in code lines"
         (expect (github-review-place-review-comments example-diff-before-comments-in-code-line review-with-comments)
                 :to-equal
