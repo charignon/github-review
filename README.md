@@ -1,3 +1,4 @@
+[![GPL v3](https://img.shields.io/badge/license-GPL_v3-green.svg)](http://www.gnu.org/licenses/gpl-3.0.txt)
 [![MELPA](https://melpa.org/packages/github-review-badge.svg)](https://melpa.org/#/github-review)
 
 # github-review: GitHub code reviews with Emacs.
