@@ -68,7 +68,7 @@ index 58baa4b..eae7707 100644
  [[try-the-wrapper-libraries-first]]
 ```
 
-You can add code suggestions by calling `github-review-suggestion-block` on top
+You can add code suggestions by calling `github-review-suggestion-block-at-point` on top
 of the line you would like to change. Just change the code inside the suggestion box
 
 ``` diff

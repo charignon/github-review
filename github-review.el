@@ -608,7 +608,7 @@ Github API provides only the originalPosition in the query.")
         (message "Got an error from the GitHub API %S!" err)))))
 
 ;;;###autoload
-(defun github-review-suggestion-block ()
+(defun github-review-suggestion-block-at-point ()
   "Open a suggestion block for the line under cursor in diff buffer."
   (interactive)
   (move-beginning-of-line 1)
