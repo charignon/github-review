@@ -183,27 +183,28 @@ CALLBACK will be called back when done"
 (defun github-review-post-review-replies (pr-alist replies callback)
   "Submit replies to review comments inline."
   (deferred:$
-    (deferred:loop
-      replies
-      (lambda (comment)
-        (let-alist pr-alist
-          (let* ((path (a-get comment 'path))
-                 (position (a-get comment 'position))
-                 (comment-id (alist-get (s-concat path
-                                                  ":"
-                                                  (number-to-string position))
-                                        github-review-pos->databaseid
-                                        nil nil 'equal))
-                 (body (a-get comment 'body)))
-            (ghub-post (format "/repos/%s/%s/pulls/%s/comments/%s/replies"
-                               .owner .repo .num comment-id)
-                       nil
-                       :payload (a-alist 'body body)
-                       :headers github-review-diffheader
-                       :auth 'github-review
-                       :host (github-review-api-host pr-alist)
-                       :callback (lambda (&rest _))
-                       :errorback #'github-review-errback)))))
+    (deferred:parallel
+      (-map (lambda (comment)
+              (lambda ()
+                (let-alist pr-alist
+                  (let* ((path (a-get comment 'path))
+                         (position (a-get comment 'position))
+                         (comment-id (alist-get (s-concat path
+                                                          ":"
+                                                          (number-to-string position))
+                                                github-review-pos->databaseid
+                                                nil nil 'equal))
+                         (body (a-get comment 'body)))
+                    (ghub-post (format "/repos/%s/%s/pulls/%s/comments/%s/replies"
+                                       .owner .repo .num comment-id)
+                               nil
+                               :payload (a-alist 'body body)
+                               :headers github-review-diffheader
+                               :auth 'github-review
+                               :host (github-review-api-host pr-alist)
+                               :callback (lambda (&rest _))
+                               :errorback #'github-review-errback)))))
+            replies))
 
     (deferred:nextc it
       (lambda (x)
