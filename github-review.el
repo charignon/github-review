@@ -62,16 +62,20 @@
 
 (defcustom github-review-view-comments-in-code-lines nil
   "Flag to enable displaying comments in code lines."
-  :group 'github-review)
+  :group 'github-review
+  :type 'boolean)
 
 (defcustom github-review-view-comments-in-code-lines-outdated nil
   "Flag to enable displaying outdated comments in code lines."
-  :group 'github-review)
+  :group 'github-review
+  :type 'boolean)
 
 (defcustom github-review-reply-inline-comments nil
   "Flag to enable replies to inline comments.
 
-This flag will only be considered if `github-review-view-comments-in-code-lines' is set to `t`.")
+This flag will only be considered if `github-review-view-comments-in-code-lines' is set to `t`."
+  :group 'github-review
+  :type 'boolean)
 
 (defconst github-review-diffheader '(("Accept" . "application/vnd.github.v3.diff"))
   "Header for requesting diffs from GitHub.")
