@@ -68,6 +68,31 @@ index 58baa4b..eae7707 100644
  [[try-the-wrapper-libraries-first]]
 ```
 
+You can add code suggestions by calling `github-review-suggestion-block-at-point` on top
+of the line you would like to change. Just change the code inside the suggestion box
+
+``` diff
+~ Bump lambdaisland/kaocha from 1.0.861 to 1.0.902
+~
+~
+
+diff --git a/deps.edn b/deps.edn
+index 0af375c..15c94f4 100644
+--- a/deps.edn
++++ b/deps.edn
+@@ -43,7 +43,7 @@
+
+   :test
+   {:extra-paths ["test/clj"]
+-   :extra-deps {lambdaisland/kaocha {:mvn/version "1.0.861"}
++   :extra-deps {lambdaisland/kaocha {:mvn/version "1.0.902"}
+# ```suggestion
+#    :extra-deps {lambdaisland/kaocha {:mvn/version "1.0.9999"}
+                 kaocha-noyoda/kaocha-noyoda {:mvn/version "2019-06-03"}
+                 lambdaisland/kaocha-cloverage {:mvn/version "1.0.75"}
+                 ring/ring-mock {:mvn/version "0.4.0"}}}
+```
+
 Once done, you can submit your review with one of `github-review-approve`, `github-review-comment`, and `github-review-reject`.
 
 ## Usage with Forge

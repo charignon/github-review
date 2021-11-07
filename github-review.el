@@ -611,6 +611,19 @@ Github API provides only the originalPosition in the query.")
       (lambda (err)
         (message "Got an error from the GitHub API %S!" err)))))
 
+;;;###autoload
+(defun github-review-suggestion-block-at-point ()
+  "Open a suggestion block for the line under cursor in diff buffer."
+  (interactive)
+  (move-beginning-of-line 1)
+  (right-char 1)
+  (kill-line)
+  (yank)
+  (open-line 1)
+  (forward-line 1)
+  (insert "# ```suggestion\n# ")
+  (yank))
+
 
 ;;;###autoload
 (defun github-review-forge-pr-at-point ()
